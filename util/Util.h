@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <unistd.h>
+#include <cstring>
+#include <sys/socket.h>
 
 namespace {
     void lockMutex(pthread_mutex_t *mutex, std::string&& mutexName, std::string& role) {
@@ -50,6 +52,13 @@ namespace {
         }
     }
 
+
+    void sendError(const char *what, int socketFd) {
+        if (send(socketFd, what, strlen(what), 0) < 0) {
+            perror("Error sending error response to client");
+        }
+        std::cout << "ERROR RESPONSE WAS SENT TO: " << socketFd << std::endl;
+    }
 }
 
 #endif

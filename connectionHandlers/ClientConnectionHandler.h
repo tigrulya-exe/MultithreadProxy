@@ -6,7 +6,7 @@
 #include "../cache/Cache.h"
 #include "../httpParser/HttpRequest.h"
 
-class ConnectionHandler {
+class ClientConnectionHandler {
     bool ready = false;
 
     std::string URL;
@@ -30,13 +30,16 @@ class ConnectionHandler {
     void initServerThread(std::string &host);
 
 public:
-    explicit ConnectionHandler(int socketFd, Cache& cache);
+    explicit ClientConnectionHandler(int socketFd, Cache& cache);
 
     static void* startThread(void* );
 
     bool isReady() const;
 
     const std::string &getUrl() const;
+
+    void checkRequest(HttpRequest &request);
+
 };
 
 

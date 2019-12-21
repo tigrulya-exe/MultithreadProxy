@@ -1,17 +1,18 @@
 #include <sys/socket.h>
-#include "ConnectionHandler.h"
+#include <cstring>
+#include "ClientConnectionHandler.h"
 #include "../constants.h"
 #include "../exceptions/ProxyException.h"
 #include "../exceptions/SocketClosedException.h"
 #include "ServerConnectionHandler.h"
 
-void *ConnectionHandler::startThread(void * connectionHandlerIn) {
-    auto* handler = (ConnectionHandler *)connectionHandlerIn;
+void *ClientConnectionHandler::startThread(void * connectionHandlerIn) {
+    auto* handler = (ClientConnectionHandler *)connectionHandlerIn;
     handler->handle();
     return nullptr;
 }
 
-HttpRequest ConnectionHandler::parseHttpRequest(std::vector<char>& request, std::string& newRequest){
+HttpRequest ClientConnectionHandler::parseHttpRequest(std::vector<char>& request, std::string& newRequest){
     HttpRequest httpRequest;
 
     const char* path;
@@ -60,28 +61,46 @@ HttpRequest ConnectionHandler::parseHttpRequest(std::vector<char>& request, std:
     return httpRequest;
 }
 
-void ConnectionHandler::handle() {
+void ClientConnectionHandler::handle() {
 
     try {
         getDataFromClient();
         std::string newRequest;
         HttpRequest request = parseHttpRequest(clientRequest, newRequest);
+        checkRequest(request);
         clientRequest.clear();
         clientRequest = std::vector<char >(newRequest.begin(), newRequest.end());
         URL = request.path;
+
+        std::cout << "REQUEST HANDLED" << std::endl;
 
         checkUrl(request);
         sendDataFromCache();
         closeSocket(socketFd);
         std::cout << socketFd <<  " finish: " << URL << std::endl;
-    } catch (std::exception& exception){
+    } catch (ProxyException& exception){
+        sendError(exception.what(), socketFd);
+    }
+    catch (std::exception& exception){
         std::cerr << exception.what() << std::endl;
     }
 
     ready = true;
 }
 
-void ConnectionHandler::getDataFromClient() {
+void ClientConnectionHandler::checkRequest(HttpRequest& request){
+
+    if(request.method == "GET" && request.method == "HEAD"){
+        throw ProxyException(errors::NOT_IMPLEMENTED);
+    }
+
+//    if(request.version != 0){
+//        throw std::runtime_error("HTTP/1.1 505\r\n\r\nHTTP VERSION NOT SUPPORTED\r\n");
+//    }
+
+}
+
+void ClientConnectionHandler::getDataFromClient() {
     char buffer[BUF_SIZE];
     int recvCount = 0;
 
@@ -97,17 +116,17 @@ void ConnectionHandler::getDataFromClient() {
     }while (!isEndOfRequest(buffer, recvCount));
 }
 
-void ConnectionHandler::checkUrl(HttpRequest& request){
+void ClientConnectionHandler::checkUrl(HttpRequest& request){
     if(!cacheRef.contains(URL)) {
         cacheRef.addCacheNode(URL);
         initServerThread(request.host);
     }
 }
 
-void ConnectionHandler::initServerThread(std::string& host) {
+void ClientConnectionHandler::initServerThread(std::string& host) {
     pthread_t newThreadId = 0;
 
-    auto* serverConnectionHandler = new ServerConnectionHandler( URL, clientRequest, host, cacheRef);
+    auto* serverConnectionHandler = new ServerConnectionHandler( URL, clientRequest, host, cacheRef, socketFd);
     if (pthread_create(&newThreadId, NULL, ServerConnectionHandler::startThread, (void *) (serverConnectionHandler))) {
         perror("Error creating thread");
     }
@@ -115,11 +134,11 @@ void ConnectionHandler::initServerThread(std::string& host) {
 //    threadIds.push_back(newThreadId);
 }
 
-const string &ConnectionHandler::getUrl() const {
+const string &ClientConnectionHandler::getUrl() const {
     return URL;
 }
 
-void ConnectionHandler::sendDataFromCache() {
+void ClientConnectionHandler::sendDataFromCache() {
 //    int offset = cacheRef.getCacheOffset(connection.socketFd);
     int offset = 0;
 
@@ -168,8 +187,8 @@ void ConnectionHandler::sendDataFromCache() {
     }
 }
 
-bool ConnectionHandler::isReady() const {
+bool ClientConnectionHandler::isReady() const {
     return ready;
 }
 
-ConnectionHandler::ConnectionHandler(int socketFd, Cache &cache) : cacheRef(cache), socketFd(socketFd) {}
+ClientConnectionHandler::ClientConnectionHandler(int socketFd, Cache &cache) : cacheRef(cache), socketFd(socketFd) {}

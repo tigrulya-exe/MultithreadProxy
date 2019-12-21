@@ -16,9 +16,11 @@ class ServerConnectionHandler {
 
     int socketFd;
 
+    int clientSocketFd;
+
     void handle();
 public:
-    ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host, Cache &cacheRef);
+    ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host, Cache &cacheRef, int clientFd);
 
     static void* startThread(void* );
 
@@ -29,6 +31,8 @@ public:
     void sendRequestToServer();
 
     void getResponseFromServer();
+
+    bool isCorrectResponseStatus(char *response, int responseLength);
 };
 
 #endif

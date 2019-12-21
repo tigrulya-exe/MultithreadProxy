@@ -45,12 +45,12 @@ void MultiThreadProxy::joinThreads(){
 }
 
 void MultiThreadProxy::addNewConnection(int newSocketFd){
-    auto&& ptr = std::make_shared<ConnectionHandler>(newSocketFd, cache);
+    auto&& ptr = std::make_shared<ClientConnectionHandler>(newSocketFd, cache);
 
     connectionHandlers.emplace_back(ptr);
     pthread_t newThreadId = 0;
 
-    if (pthread_create(&newThreadId, NULL, ConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
+    if (pthread_create(&newThreadId, NULL, ClientConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
         perror("Error creating thread");
     }
 

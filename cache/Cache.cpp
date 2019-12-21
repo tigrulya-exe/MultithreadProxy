@@ -32,7 +32,6 @@ CacheNode* Cache::getCacheNode(std::string& url){
 void Cache::addCacheNode(std::string& path){
     lockMutex(&mutex, "cacheMutex", name);
     cacheNodes.emplace_back();
-    CacheNode node = *cacheNodes.rbegin();
     urlToCacheNode.emplace(path, &(*cacheNodes.rbegin()));
     unlockMutex(&mutex,"cacheMutex", name);
 }

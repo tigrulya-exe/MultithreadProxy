@@ -2,7 +2,7 @@
 #include "constants.h"
 #include "cache/Cache.h"
 #include "httpParser/HttpRequest.h"
-#include "connectionHandlers/ConnectionHandler.h"
+#include "connectionHandlers/ClientConnectionHandler.h"
 #include <vector>
 #include <memory>
 
@@ -18,7 +18,7 @@ class MultiThreadProxy {
 
     Cache cache;
 
-    std::list<std::shared_ptr<ConnectionHandler>> connectionHandlers;
+    std::list<std::shared_ptr<ClientConnectionHandler>> connectionHandlers;
 
 public:
     explicit MultiThreadProxy(int portToListen);
