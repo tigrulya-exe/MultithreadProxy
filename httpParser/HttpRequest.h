@@ -1,5 +1,5 @@
 #include <cstdio>
-#include "../httpParser/HttpParser.h"
+#include "HttpParser.h"
 
 #ifndef REQUEST_H
 #define REQUEST_H

@@ -7,20 +7,20 @@
 #include <string>
 #include <vector>
 #include <semaphore.h>
-#include "../Cache.h"
+#include "../cache/Cache.h"
 
 struct Connection {
-    explicit Connection(int socketFd, Cache& cacheRef) : socketFd(socketFd), cacheRef(cacheRef) {}
+    explicit Connection(int socketFd) : socketFd(socketFd) {}
 
     int socketFd;
 
     std::string URL;
 
-    std::vector<char> clientRequest;
+//    std::vector<char> clientRequest;
 
-    Cache& cacheRef;
+//    Cache& cacheRef;
 
-    sem_t semaphore;
+//    pthread_cond_t anyDataCondVar;
 };
 
 

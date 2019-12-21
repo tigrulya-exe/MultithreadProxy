@@ -1,14 +1,16 @@
 
 #include "constants.h"
-#include "Cache.h"
+#include "cache/Cache.h"
 #include "models/Connection.h"
+#include "httpParser/HttpRequest.h"
+#include "connectionHandlers/ConnectionHandler.h"
 #include <vector>
+#include <memory>
 
 #ifndef MULTYTHREADPROXY_H
 #define MULTYTHREADPROXY_H
 
 class MultiThreadProxy {
-    static const int ACCEPT_INDEX = 0;
     static const int MAX_CONNECTIONS = 510;
 
     int acceptSocketFd;
@@ -17,7 +19,8 @@ class MultiThreadProxy {
 
     Cache cache;
 
-    std::vector<Connection> connections;
+    std::list<std::shared_ptr<ConnectionHandler>> connectionHandlers;
+
 public:
     explicit MultiThreadProxy(int portToListen);
 
@@ -31,6 +34,7 @@ public:
 
     void joinThreads();
 
+    void checkConnectionHandlers();
 };
 
 

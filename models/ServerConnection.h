@@ -8,11 +8,11 @@
 
 #include <string>
 #include <vector>
-#include "../Cache.h"
+#include "../cache/Cache.h"
 
 struct ServerConnection {
-    ServerConnection(std::string &host, std::string &url, std::vector<char> &clientRequest, Cache &cacheRef, sem_t& semaphore) : host(
-            host), URL(url), clientRequest(clientRequest), cacheRef(cacheRef), semaphore(semaphore) {}
+    ServerConnection(std::string &host, std::string &url, std::vector<char> &clientRequest, Cache &cacheRef, pthread_cond_t& condVar) : host(
+            host), URL(url), clientRequest(clientRequest), cacheRef(cacheRef) {}
 
     int socketFd;
 
@@ -23,8 +23,6 @@ struct ServerConnection {
     std::vector<char>& clientRequest;
 
     Cache& cacheRef;
-
-    sem_t& semaphore;
 };
 
 
