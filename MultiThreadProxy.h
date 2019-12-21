@@ -1,7 +1,6 @@
 
 #include "constants.h"
 #include "cache/Cache.h"
-#include "models/Connection.h"
 #include "httpParser/HttpRequest.h"
 #include "connectionHandlers/ConnectionHandler.h"
 #include <vector>

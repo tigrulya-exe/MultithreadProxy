@@ -40,11 +40,3 @@ void Cache::addCacheNode(std::string& path){
 Cache::Cache() {
     initMutex(&mutex, "cacheMutex", "cache");
 }
-
-//pthread_mutex_t& Cache::getCacheNodeMutex(std::string &URL) {
-//    return cacheNodeMutexes[URL];
-//}
-//
-//void Cache::addCacheNodeMutex(const std::string &URL, pthread_mutex_t& mutex) {
-//    cacheNodeMutexes[URL] = mutex;
-//}

@@ -6,12 +6,13 @@
 #include "exceptions/ProxyException.h"
 #include "exceptions/SocketClosedException.h"
 #include "httpParser/HttpRequest.h"
-#include "models/ServerConnection.h"
 
 MultiThreadProxy::MultiThreadProxy(int portToListen) : portToListen(portToListen) {}
 
 // todo add mutex
 std::vector<pthread_t> threadIds;
+// todo remove conditional variable after (or before?) serverSocket death
+// todo add correct error handling
 
 bool isInterrupted = false;
 
@@ -44,15 +45,16 @@ void MultiThreadProxy::joinThreads(){
 }
 
 void MultiThreadProxy::addNewConnection(int newSocketFd){
-    auto&& ptr = std::make_shared<ConnectionHandler>(Connection(newSocketFd), cache);
-    connectionHandlers.emplace_back(ptr);
-    pthread_t newthreadId = 0;
+    auto&& ptr = std::make_shared<ConnectionHandler>(newSocketFd, cache);
 
-    if (pthread_create(&newthreadId, NULL, ConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
+    connectionHandlers.emplace_back(ptr);
+    pthread_t newThreadId = 0;
+
+    if (pthread_create(&newThreadId, NULL, ConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
         perror("Error creating thread");
     }
 
-    threadIds.push_back(newthreadId);
+    threadIds.push_back(newThreadId);
 }
 
 int MultiThreadProxy::initAcceptSocket(){
@@ -85,7 +87,7 @@ void MultiThreadProxy::initAddress(sockaddr_in* addr, int port){
 void MultiThreadProxy::checkConnectionHandlers() {
     for (auto iter = connectionHandlers.begin();iter != connectionHandlers.end(); ) {
         if ((*iter) ->isReady()) {
-            std::cout << "REMOVED: " << (*iter) ->getConnection().URL << std::endl;
+            std::cout << "REMOVED: " << (*iter) ->getUrl() << std::endl;
             iter = connectionHandlers.erase(iter);
             continue;
         }

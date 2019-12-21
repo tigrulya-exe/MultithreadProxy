@@ -2,9 +2,7 @@
 #include "ConnectionHandler.h"
 #include "../constants.h"
 #include "../exceptions/ProxyException.h"
-#include "../models/Connection.h"
 #include "../exceptions/SocketClosedException.h"
-#include "../models/ServerConnection.h"
 #include "ServerConnectionHandler.h"
 
 void *ConnectionHandler::startThread(void * connectionHandlerIn) {
@@ -53,9 +51,6 @@ HttpRequest ConnectionHandler::parseHttpRequest(std::vector<char>& request, std:
         if (headerName == "Host") {
             httpRequest.host = headerValue;
         }
-//
-//        if(headerName != "")
-//            continue;
 
         newRequest.append(headerName).append(": ").append(headerValue) += "\r\n";
     }
@@ -73,12 +68,12 @@ void ConnectionHandler::handle() {
         HttpRequest request = parseHttpRequest(clientRequest, newRequest);
         clientRequest.clear();
         clientRequest = std::vector<char >(newRequest.begin(), newRequest.end());
-        connection.URL = request.path;
+        URL = request.path;
 
         checkUrl(request);
         sendDataFromCache();
-        closeSocket(connection.socketFd);
-        std::cout << connection.socketFd <<  " finish: " << connection.URL << std::endl;
+        closeSocket(socketFd);
+        std::cout << socketFd <<  " finish: " << URL << std::endl;
     } catch (std::exception& exception){
         std::cerr << exception.what() << std::endl;
     }
@@ -91,7 +86,7 @@ void ConnectionHandler::getDataFromClient() {
     int recvCount = 0;
 
     do{
-        if ((recvCount = recv(connection.socketFd, buffer, BUF_SIZE, 0)) < 0) {
+        if ((recvCount = recv(socketFd, buffer, BUF_SIZE, 0)) < 0) {
             throw ProxyException(errors::INTERNAL_ERROR);
         }
 
@@ -103,8 +98,8 @@ void ConnectionHandler::getDataFromClient() {
 }
 
 void ConnectionHandler::checkUrl(HttpRequest& request){
-    if(!cacheRef.contains(connection.URL)) {
-        cacheRef.addCacheNode(connection.URL);
+    if(!cacheRef.contains(URL)) {
+        cacheRef.addCacheNode(URL);
         initServerThread(request.host);
     }
 }
@@ -112,9 +107,7 @@ void ConnectionHandler::checkUrl(HttpRequest& request){
 void ConnectionHandler::initServerThread(std::string& host) {
     pthread_t newThreadId = 0;
 
-//    addCacheNodeMutex(connection.URL, connection.cacheRef);
-
-    auto* serverConnectionHandler = new ServerConnectionHandler( connection.URL, clientRequest, host, cacheRef);
+    auto* serverConnectionHandler = new ServerConnectionHandler( URL, clientRequest, host, cacheRef);
     if (pthread_create(&newThreadId, NULL, ServerConnectionHandler::startThread, (void *) (serverConnectionHandler))) {
         perror("Error creating thread");
     }
@@ -122,51 +115,9 @@ void ConnectionHandler::initServerThread(std::string& host) {
 //    threadIds.push_back(newThreadId);
 }
 
-//void ConnectionHandler::sendDataFromCache() {
-////    int offset = cacheRef.getCacheOffset(connection.socketFd);
-//    int offset = 0;
-//
-//    int sendCount;
-//    int size = 0;
-//
-//    auto* cacheNode = cacheRef.getCacheNode(connection.URL);
-//    auto &cacheNodeMutex = cacheNode.getMutex();
-//    auto& condVar = cacheNode.getAnyDataCondVar();
-//
-//    //for debug
-//    std::string name = "Client";
-//
-//    while (!cacheNode.isReady(name) || offset != cacheNode.getSize(name)) {
-//
-//        if(cacheNode )
-//
-//        while (offset == (size = cacheNode.getSize(name))) {
-//            lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
-//            pthread_cond_wait(&condVar, &cacheNodeMutex);
-//            unlockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
-//        }
-//
-////        if ((sendCount = send(connection.socketFd, data.data() + offset, size - offset, 0)) < 0) {
-//        if ((sendCount = send(connection.socketFd, cacheNode.getData(name, offset, size - offset).data(),
-//                size - offset, 0)) < 0) {
-//
-//                perror("Error sending data to client from cache");
-//            throw ProxyException(errors::CACHE_SEND_ERROR);
-//        }
-//
-//        std::cout << connection.socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << connection.URL
-//                  << std::endl;
-////        }
-//
-////        cacheRef.setCacheOffset(connection.socketFd, offset += sendCount);
-//
-//        offset += sendCount;
-////        lockMutex(&cacheNodeMutex);
-////        cacheNode = cache.getCurrentData(connection.URL);
-//
-//        // tmp
-//    }
-//}
+const string &ConnectionHandler::getUrl() const {
+    return URL;
+}
 
 void ConnectionHandler::sendDataFromCache() {
 //    int offset = cacheRef.getCacheOffset(connection.socketFd);
@@ -175,7 +126,7 @@ void ConnectionHandler::sendDataFromCache() {
     int sendCount;
     int size = 0;
 
-    auto* cacheNode = cacheRef.getCacheNode(connection.URL);
+    auto* cacheNode = cacheRef.getCacheNode(URL);
     auto &cacheNodeMutex = cacheNode->getMutex();
     auto& condVar = cacheNode->getAnyDataCondVar();
 
@@ -193,15 +144,17 @@ void ConnectionHandler::sendDataFromCache() {
                 unlockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
             }
 
+
+            // TODO check if we really ned copying cacheNode data
 //        if ((sendCount = send(connection.socketFd, data.data() + offset, size - offset, 0)) < 0) {
-        if ((sendCount = send(connection.socketFd, cacheNode->getData(name, offset, size - offset).data(),
+        if ((sendCount = send(socketFd, cacheNode->getData(name, offset, size - offset).data(),
                               size - offset, 0)) < 0) {
 
             perror("Error sending data to client from cache");
             throw ProxyException(errors::CACHE_SEND_ERROR);
         }
 
-        std::cout << connection.socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << connection.URL
+        std::cout << socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << URL
                   << std::endl;
 //        }
 
@@ -215,17 +168,8 @@ void ConnectionHandler::sendDataFromCache() {
     }
 }
 
-ConnectionHandler::ConnectionHandler(Connection &&connection, Cache& cache) : connection(connection) ,cacheRef(cache){
-}
-
 bool ConnectionHandler::isReady() const {
     return ready;
 }
 
-const Connection &ConnectionHandler::getConnection() const {
-    return connection;
-}
-
-ConnectionHandler::ConnectionHandler(int socketFd, Cache &cache) : cacheRef(cache) {
-
-}
+ConnectionHandler::ConnectionHandler(int socketFd, Cache &cache) : cacheRef(cache), socketFd(socketFd) {}

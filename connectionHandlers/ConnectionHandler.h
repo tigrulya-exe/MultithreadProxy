@@ -5,7 +5,6 @@
 #include <vector>
 #include "../cache/Cache.h"
 #include "../httpParser/HttpRequest.h"
-#include "../models/Connection.h"
 
 class ConnectionHandler {
     bool ready = false;
@@ -18,7 +17,7 @@ class ConnectionHandler {
 
     HttpRequest parseHttpRequest(std::vector<char>& request, std::string& newRequest);
 
-    Connection connection;
+    int socketFd;
 
     void handle();
 
@@ -31,16 +30,14 @@ class ConnectionHandler {
     void initServerThread(std::string &host);
 
 public:
-    explicit ConnectionHandler(Connection&& connection, Cache& cache);
-
     explicit ConnectionHandler(int socketFd, Cache& cache);
 
     static void* startThread(void* );
 
     bool isReady() const;
 
-    const Connection &getConnection() const;
+    const std::string &getUrl() const;
 };
 
 
-#endif //MULTYTHREADPROXY_CONNECTIONHANDLER_H
+#endif
