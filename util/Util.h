@@ -99,7 +99,7 @@ namespace {
         }
 
         sigAddSet(&sigSet, SIGINT);
-//        sigAddSet(&sigSet, SIGTERM);
+        sigAddSet(&sigSet, SIGTERM);
         sigAddSet(&sigSet, SIGQUIT);
 
         return sigSet;

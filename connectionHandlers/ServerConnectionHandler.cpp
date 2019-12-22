@@ -18,7 +18,6 @@ void *ServerConnectionHandler::startThread(void * handler) {
     return nullptr;
 }
 
-
 int ServerConnectionHandler::initServerConnection(){
     int serverSockFd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -93,7 +92,7 @@ void ServerConnectionHandler::getResponseFromServer(){
             throw ProxyException(errors::INTERNAL_ERROR);
         }
 
-        std::cout << "SERVER GET: " <<  recvCount << "BYTES" << std::endl;
+//        std::cout << "SERVER GET: " <<  recvCount << "BYTES" << std::endl;
 
         cacheNode->addData(buffer, recvCount);
         pthread_cond_broadcast(&condVar);
@@ -131,6 +130,7 @@ void ServerConnectionHandler::handle() {
 
         getResponseFromServer();
         closeSocket(socketFd);
+        interrupted = false;
     }
     catch (ProxyException& exception){
         sendError(exception.what(), clientSocketFd);
@@ -138,4 +138,9 @@ void ServerConnectionHandler::handle() {
     catch (std::exception& exception){
         std::cerr << exception.what() << std::endl;
     }
+}
+
+ServerConnectionHandler::~ServerConnectionHandler() {
+    if(interrupted)
+        closeSocket(socketFd);
 }

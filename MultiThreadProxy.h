@@ -10,7 +10,6 @@
 #ifndef MULTYTHREADPROXY_H
 #define MULTYTHREADPROXY_H
 
-
 class MultiThreadProxy {
     static const int MAX_CONNECTIONS = 512;
 
@@ -47,13 +46,15 @@ class MultiThreadProxy {
     void joinThreads();
 
     static void interrupt (int sig);
-public:
 
+public:
     explicit MultiThreadProxy(int portToListen);
 
     void start();
 
     virtual ~MultiThreadProxy();
+
+    void removeThreadId(pthread_t threadIdToRemove);
 };
 
 

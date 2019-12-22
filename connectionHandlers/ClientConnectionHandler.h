@@ -17,6 +17,14 @@ class ClientConnectionHandler {
 
     Cache& cacheRef;
 
+    std::vector<pthread_t>& threadIds;
+
+    pthread_mutex_t& threadIdsMutex;
+
+    pthread_t pthreadId;
+
+    bool interrupted = true;
+
     HttpRequest parseHttpRequest(std::vector<char>& request, std::string& newRequest);
 
     int socketFd;
@@ -32,7 +40,7 @@ class ClientConnectionHandler {
     void initServerThread(std::string &host);
 
 public:
-    explicit ClientConnectionHandler(int socketFd, Cache& cache);
+    explicit ClientConnectionHandler(int socketFd, Cache& cache, std::vector<pthread_t>& threadIds, pthread_mutex_t& threadIdsMutex);
 
     static void* startThread(void* );
 
@@ -45,6 +53,8 @@ public:
     virtual ~ClientConnectionHandler();
 
     void setReady();
+
+    pthread_t getPthreadId();
 };
 
 #endif

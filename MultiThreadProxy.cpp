@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <csignal>
+#include <algorithm>
 #include "MultiThreadProxy.h"
 #include "exceptions/ProxyException.h"
 #include "exceptions/SocketClosedException.h"
@@ -10,8 +11,14 @@
 
 bool MultiThreadProxy::isInterrupted = false;
 
+void pthreadExit(int signal){
+    std::cout << "EXIT" << std::endl;
+
+    pthread_exit(EXIT_SUCCESS);
+}
+
 MultiThreadProxy::MultiThreadProxy(int portToListen) :
-    portToListen(portToListen), signalHandler(threadIds, threadIdsMutex) {
+    portToListen(portToListen), signalHandler(threadIds, threadIdsMutex, pthread_self()) {
     initMutex(&threadIdsMutex);
     setSigMask();
     setSigUsrHandler();
@@ -28,6 +35,9 @@ void MultiThreadProxy::setSigUsrHandler(){
     sigAction.sa_flags = 0;
 
     sigaction (SIGUSR1, &sigAction, nullptr);
+
+    sigAction.sa_handler = pthreadExit;
+    sigaction (SIGUSR2, &sigAction, nullptr);
 }
 
 
@@ -48,11 +58,16 @@ void MultiThreadProxy::start(){
         checkConnectionHandlers();
     }
 
-    joinThreads();
+//    joinThreads();
 }
 
 void MultiThreadProxy::joinThreads(){
+    std::cout << std::endl << "Stopping server..." << std::endl;
+    fflush(stdout);
+
     for(auto& threadId : threadIds){
+        std::cout << std::endl << "WAITING FOR: " << threadId << std::endl;
+        fflush(stdout);
         if (pthread_join(threadId,NULL)){
             perror("Error waiting thread");
         }
@@ -65,7 +80,7 @@ void MultiThreadProxy::addNewConnection(int newSocketFd){
         return;
     }
 
-    auto&& ptr = std::make_shared<ClientConnectionHandler>(newSocketFd, cache);
+    auto&& ptr = std::make_shared<ClientConnectionHandler>(newSocketFd, cache, threadIds, threadIdsMutex);
 
     connectionHandlers.emplace_back(ptr);
     pthread_t newThreadId = 0;
@@ -79,6 +94,8 @@ void MultiThreadProxy::addNewConnection(int newSocketFd){
     lockMutex(&threadIdsMutex);
     threadIds.push_back(newThreadId);
     unlockMutex(&threadIdsMutex);
+
+    std::cout << "NEW THREAD: " << newThreadId << std::endl;
 }
 
 bool MultiThreadProxy::readyToConnect(){
@@ -97,9 +114,9 @@ void MultiThreadProxy::initSignalHandlerThread(){
         exit(EXIT_FAILURE);
     }
 
-    lockMutex(&threadIdsMutex);
-    threadIds.push_back(newThreadId);
-    unlockMutex(&threadIdsMutex);
+//    lockMutex(&threadIdsMutex);
+//    threadIds.push_back(newThreadId);
+//    unlockMutex(&threadIdsMutex);
 }
 
 int MultiThreadProxy::initAcceptSocket(){
@@ -129,10 +146,19 @@ void MultiThreadProxy::initAddress(sockaddr_in* addr, int port){
     addr->sin_port = htons(port);
 }
 
+void MultiThreadProxy::removeThreadId(pthread_t threadIdToRemove){
+    lockMutex(&threadIdsMutex);
+    threadIds.erase(std::remove_if(threadIds.begin(), threadIds.end(), [&threadIdToRemove](const pthread_t& threadId) {
+        return threadId == threadIdToRemove;
+    }), threadIds.end());
+    unlockMutex(&threadIdsMutex);
+}
+
 void MultiThreadProxy::checkConnectionHandlers() {
     for (auto iter = connectionHandlers.begin();iter != connectionHandlers.end(); ) {
         if ((*iter) ->isReady()) {
             std::cout << "REMOVED: " << (*iter) ->getUrl() << std::endl;
+            removeThreadId((*iter)->getPthreadId());
             iter = connectionHandlers.erase(iter);
             continue;
         }
@@ -142,6 +168,7 @@ void MultiThreadProxy::checkConnectionHandlers() {
 
 MultiThreadProxy::~MultiThreadProxy() {
     destroyMutex(&threadIdsMutex);
+    connectionHandlers.clear();
 }
 
 void MultiThreadProxy::interrupt(int sig) {

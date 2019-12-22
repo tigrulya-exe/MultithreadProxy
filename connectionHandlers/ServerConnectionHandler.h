@@ -16,6 +16,8 @@ class ServerConnectionHandler {
 
     int socketFd;
 
+    bool interrupted = true;
+
     int clientSocketFd;
 
     void handle();
@@ -33,6 +35,8 @@ public:
     void getResponseFromServer();
 
     bool isCorrectResponseStatus(char *response, int responseLength);
+
+    virtual ~ServerConnectionHandler();
 };
 
 #endif

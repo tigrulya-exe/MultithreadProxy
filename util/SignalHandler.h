@@ -10,9 +10,11 @@ class SignalHandler {
 
     pthread_mutex_t& mutex;
 
+    pthread_t proxyThreadId;
+
     void sigWait();
 public:
-    SignalHandler(std::vector<pthread_t> &threadIds, pthread_mutex_t &mutex);
+    SignalHandler(std::vector<pthread_t> &threadIds, pthread_mutex_t &mutex, pthread_t proxyThreadId);
 
     static void* startThread(void*);
 
