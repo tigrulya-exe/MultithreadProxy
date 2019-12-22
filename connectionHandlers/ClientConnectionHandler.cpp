@@ -76,7 +76,6 @@ void ClientConnectionHandler::handle() {
 
         checkUrl(request);
         sendDataFromCache();
-        closeSocket(socketFd);
         std::cout << socketFd <<  " finish: " << URL << std::endl;
     } catch (ProxyException& exception){
         sendError(exception.what(), socketFd);
@@ -85,18 +84,14 @@ void ClientConnectionHandler::handle() {
         std::cerr << exception.what() << std::endl;
     }
 
+    closeSocket(socketFd);
     ready = true;
 }
 
 void ClientConnectionHandler::checkRequest(HttpRequest& request){
-
     if(request.method == "GET" && request.method == "HEAD"){
         throw ProxyException(errors::NOT_IMPLEMENTED);
     }
-
-//    if(request.version != 0){
-//        throw std::runtime_error("HTTP/1.1 505\r\n\r\nHTTP VERSION NOT SUPPORTED\r\n");
-//    }
 
 }
 
@@ -139,35 +134,25 @@ const string &ClientConnectionHandler::getUrl() const {
 }
 
 void ClientConnectionHandler::sendDataFromCache() {
-//    int offset = cacheRef.getCacheOffset(connection.socketFd);
-    int offset = 0;
-
-    int sendCount;
-    int size = 0;
+    int sendCount, offset = 0, size = 0;
 
     auto* cacheNode = cacheRef.getCacheNode(URL);
-    auto &cacheNodeMutex = cacheNode->getMutex();
+    auto& cacheNodeMutex = cacheNode->getMutex();
     auto& condVar = cacheNode->getAnyDataCondVar();
 
     //for debug
     std::string name = "Client";
 
-    if(cacheNode == NULL){
-        std::cout << "NULL" << std::endl;
-    }
-    while (!cacheNode->isReady(name) || offset != cacheNode->getSize(name)) {
+    while (!cacheNode->isReady() || offset != cacheNode->getSize()) {
 
-            while (offset == (size = cacheNode->getSize(name))) {
-                lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
-                pthread_cond_wait(&condVar, &cacheNodeMutex);
-                unlockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
-            }
+        lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
+        while (offset == (size = cacheNode->getSizeWithoutLock())) {
+            pthread_cond_wait(&condVar, &cacheNodeMutex);
+        }
+        unlockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
 
-
-            // TODO check if we really ned copying cacheNode data
-//        if ((sendCount = send(connection.socketFd, data.data() + offset, size - offset, 0)) < 0) {
-        if ((sendCount = send(socketFd, cacheNode->getData(name, offset, size - offset).data(),
-                              size - offset, 0)) < 0) {
+        if ((sendCount = send(socketFd,
+                              cacheNode->getData(offset, size - offset).data(), size - offset, 0)) < 0) {
 
             perror("Error sending data to client from cache");
             throw ProxyException(errors::CACHE_SEND_ERROR);
@@ -175,15 +160,8 @@ void ClientConnectionHandler::sendDataFromCache() {
 
         std::cout << socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << URL
                   << std::endl;
-//        }
-
-//        cacheRef.setCacheOffset(connection.socketFd, offset += sendCount);
 
         offset += sendCount;
-//        lockMutex(&cacheNodeMutex);
-//        cacheNode = cache.getCurrentData(connection.URL);
-
-        // tmp
     }
 }
 

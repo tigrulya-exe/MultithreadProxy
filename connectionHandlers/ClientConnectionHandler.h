@@ -39,8 +39,6 @@ public:
     const std::string &getUrl() const;
 
     void checkRequest(HttpRequest &request);
-
 };
-
 
 #endif

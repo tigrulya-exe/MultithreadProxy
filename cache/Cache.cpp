@@ -8,16 +8,6 @@ bool Cache::contains(std::string& url) {
     return contains;
 }
 
-int Cache::getCacheOffset(int socketFd) {
-    return cacheOffsets[socketFd];
-}
-
-void Cache::setCacheOffset(int socketFd, int newOffset) {
-    lockMutex(&mutex, "cacheMutex", name);
-    cacheOffsets.emplace(socketFd, newOffset);
-    unlockMutex(&mutex , "cacheMutex", name);
-}
-
 pthread_mutex_t& Cache::getMutex(){
     return mutex;
 }
@@ -37,5 +27,9 @@ void Cache::addCacheNode(std::string& path){
 }
 
 Cache::Cache() {
-    initMutex(&mutex, "cacheMutex", "cache");
+    initMutex(&mutex);
+}
+
+Cache::~Cache() {
+    destroyMutex(&mutex);
 }

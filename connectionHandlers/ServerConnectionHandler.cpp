@@ -86,7 +86,6 @@ void ServerConnectionHandler::getResponseFromServer(){
 
     // tmp add mutexes
     CacheNode* cacheNode = cacheRef.getCacheNode(URL);
-    pthread_mutex_t& cacheNodeMutex = cacheNode->getMutex();
     auto& condVar = cacheNode->getAnyDataCondVar();
 
 
@@ -97,9 +96,7 @@ void ServerConnectionHandler::getResponseFromServer(){
 
         std::cout << "SERVER GET: " <<  recvCount << "BYTES" << std::endl;
 
-//        lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
         cacheNode->addData(buffer, recvCount);
-//        unlockMutex(&cacheNodeMutex, "cacheNodeMutex", "server");
 
         pthread_cond_broadcast(&condVar);
     }

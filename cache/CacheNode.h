@@ -19,19 +19,23 @@ public:
 
     CacheNode();
 
-    bool isReady(std::string& name);
+    bool isReady();
 
     void addData(char *newData, int newDataLength);
 
-    int getSize(std::string& name);
+    int getSize();
 
-    std::vector<char> getData(std::string& name, int offset, int length);
+    std::vector<char> getData(int offset, int length);
 
     void setReady();
 
     pthread_mutex_t &getMutex();
 
     pthread_cond_t &getAnyDataCondVar();
+
+    virtual ~CacheNode();
+
+    int getSizeWithoutLock();
 };
 
 

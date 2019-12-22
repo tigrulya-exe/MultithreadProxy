@@ -24,15 +24,37 @@ namespace {
         }
     }
 
-    void initMutex(pthread_mutex_t *mutex, std::string&& mutexName, std::string&& role) {
-        std::cout << role << " INIT: " << mutexName << std::endl;
+    void lockMutex(pthread_mutex_t *mutex) {
+        if (pthread_mutex_lock(mutex)) {
+            perror("Error locking mutex");
+        }
+    }
 
+    void unlockMutex(pthread_mutex_t *mutex) {
+//        std::cout << role << " UNLOCK: " << mutexName << std::endl;
+        if (pthread_mutex_unlock(mutex)) {
+            perror("Error unlocking mutex");
+        }
+    }
+
+    void initMutex(pthread_mutex_t *mutex) {
         if (pthread_mutex_init(mutex, nullptr) < 0) {
             perror("Error creating mutex");
             exit(EXIT_FAILURE);
         }
     }
 
+    void destroyMutex(pthread_mutex_t *mutex){
+        if (pthread_mutex_destroy(mutex) < 0) {
+            perror("Error destroying mutex");
+        }
+    }
+
+    void destroyCondVar(pthread_cond_t* condVar){
+        if (pthread_cond_destroy(condVar) < 0) {
+            perror("Error destroying conditional variable");
+        }
+    }
 
     void initCondVar(pthread_cond_t* condVar){
         if(pthread_cond_init(condVar, NULL)){

@@ -1,46 +1,48 @@
 #include "CacheNode.h"
 
-bool CacheNode::isReady(std::string& name) {
-    lockMutex(&mutex, "cacheNodeMutex", name);
+bool CacheNode::isReady() {
+    lockMutex(&mutex);
     bool isReady = nodeReady;
-    unlockMutex(&mutex, "cacheNodeMutex", name);
+    unlockMutex(&mutex);
 
     return isReady;
 }
 
 void CacheNode::addData(char *newData, int newDataLength) {
-//    lockMutex(&mutex);
+    lockMutex(&mutex);
     data.insert(data.end(), newData, newData + newDataLength);
-//    unlockMutex(&mutex);
+    unlockMutex(&mutex);
 }
 
-std::vector<char> CacheNode::getData(std::string& name, int offset, int length) {
-    lockMutex(&mutex, "cacheNodeMutex", name);
+std::vector<char> CacheNode::getData(int offset, int length) {
+    lockMutex(&mutex);
     auto subVector = std::vector<char>(data.begin() + offset, data.begin() + offset + length);
-    unlockMutex(&mutex, "cacheNodeMutex", name);
+    unlockMutex(&mutex);
 
     return subVector;
 }
 
-int CacheNode::getSize(std::string& name){
-    lockMutex(&mutex, "cacheNodeMutex", name);
+int CacheNode::getSize(){
+    lockMutex(&mutex);
     auto size = data.size();
-    unlockMutex(&mutex, "cacheNodeMutex", name);
+    unlockMutex(&mutex);
 
     return size;
 }
 
+int CacheNode::getSizeWithoutLock(){
+    return data.size();
+}
+
 CacheNode::CacheNode() : nodeReady(false) {
     initCondVar(&anyDataCondVar);
-    initMutex(&mutex, "cacheNodeMutex", "cacheNode");
+    initMutex(&mutex);
 }
 
 void CacheNode::setReady(){
-    // for debug
-    std::string name = "Server";
-    lockMutex(&mutex, "cacheNodeMutex", name);
+    lockMutex(&mutex);
     nodeReady = true;
-    unlockMutex(&mutex,"cacheNodeMutex", name);
+    unlockMutex(&mutex);
 }
 
 pthread_mutex_t& CacheNode::getMutex(){
@@ -49,4 +51,9 @@ pthread_mutex_t& CacheNode::getMutex(){
 
 pthread_cond_t &CacheNode::getAnyDataCondVar() {
     return anyDataCondVar;
+}
+
+CacheNode::~CacheNode() {
+    if(!nodeReady)
+        destroyCondVar(&anyDataCondVar);
 }
