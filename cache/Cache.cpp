@@ -8,21 +8,16 @@ bool Cache::contains(std::string& url) {
     return contains;
 }
 
-pthread_mutex_t& Cache::getMutex(){
-    return mutex;
-}
-
-CacheNode* Cache::getCacheNode(std::string& url){
+std::shared_ptr<CacheNode>& Cache::getCacheNode(std::string& url){
     lockMutex(&mutex, "cacheMutex", name);
-    CacheNode* nodeRef = urlToCacheNode[url];
+    auto& nodeRef = urlToCacheNode[url];
     unlockMutex(&mutex, "cacheMutex", name);
     return nodeRef;
 }
 
 void Cache::addCacheNode(std::string& path){
     lockMutex(&mutex, "cacheMutex", name);
-    cacheNodes.emplace_back();
-    urlToCacheNode.emplace(path, &(*cacheNodes.rbegin()));
+    urlToCacheNode.emplace(path, std::make_shared<CacheNode>());
     unlockMutex(&mutex,"cacheMutex", name);
 }
 

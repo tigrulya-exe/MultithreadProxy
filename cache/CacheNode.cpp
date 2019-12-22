@@ -54,6 +54,5 @@ pthread_cond_t &CacheNode::getAnyDataCondVar() {
 }
 
 CacheNode::~CacheNode() {
-    if(!nodeReady)
-        destroyCondVar(&anyDataCondVar);
+    destroyCondVar(&anyDataCondVar);
 }

@@ -136,7 +136,7 @@ const string &ClientConnectionHandler::getUrl() const {
 void ClientConnectionHandler::sendDataFromCache() {
     int sendCount, offset = 0, size = 0;
 
-    auto* cacheNode = cacheRef.getCacheNode(URL);
+    auto& cacheNode = cacheRef.getCacheNode(URL);
     auto& cacheNodeMutex = cacheNode->getMutex();
     auto& condVar = cacheNode->getAnyDataCondVar();
 
@@ -144,7 +144,6 @@ void ClientConnectionHandler::sendDataFromCache() {
     std::string name = "Client";
 
     while (!cacheNode->isReady() || offset != cacheNode->getSize()) {
-
         lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
         while (offset == (size = cacheNode->getSizeWithoutLock())) {
             pthread_cond_wait(&condVar, &cacheNodeMutex);
@@ -153,7 +152,6 @@ void ClientConnectionHandler::sendDataFromCache() {
 
         if ((sendCount = send(socketFd,
                               cacheNode->getData(offset, size - offset).data(), size - offset, 0)) < 0) {
-
             perror("Error sending data to client from cache");
             throw ProxyException(errors::CACHE_SEND_ERROR);
         }

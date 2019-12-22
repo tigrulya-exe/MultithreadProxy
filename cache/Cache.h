@@ -1,6 +1,7 @@
 #include <vector>
 #include <map>
 #include <list>
+#include <memory>
 #include "CacheNode.h"
 
 #ifndef CACHE_H
@@ -8,25 +9,18 @@
 
 class Cache{
 private:
-    using iterator = std::list<CacheNode>::reverse_iterator;
-
     // for debug
     std::string name = "Cache";
 
     pthread_mutex_t mutex;
 
-    std::list<CacheNode> cacheNodes;
-
-    std::map<std::string, CacheNode*> urlToCacheNode;
-
+    std::map<std::string, std::shared_ptr<CacheNode>> urlToCacheNode;
 public:
     Cache();
 
     bool contains(std::string& url);
 
-    CacheNode* getCacheNode(std::string &url);
-
-    pthread_mutex_t &getMutex();
+    std::shared_ptr<CacheNode>& getCacheNode(std::string &url);
 
     void addCacheNode(std::string &path);
 

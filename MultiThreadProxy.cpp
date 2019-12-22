@@ -11,7 +11,6 @@ MultiThreadProxy::MultiThreadProxy(int portToListen) : portToListen(portToListen
 
 // todo add mutex
 std::vector<pthread_t> threadIds;
-// todo remove conditional variable after (or before?) serverSocket death
 // todo add correct error handling
 
 bool isInterrupted = false;

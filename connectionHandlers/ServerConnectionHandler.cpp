@@ -7,7 +7,7 @@
 #include "../exceptions/ProxyException.h"
 #include "../httpParser/HttpParser.h"
 
-    ServerConnectionHandler::ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host,
+ServerConnectionHandler::ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host,
                                                  Cache &cacheRef, int clientFd) : URL(url), clientRequest(clientRequest), host(host),
                                                                     cacheRef(cacheRef), clientSocketFd(clientFd) {}
 
@@ -84,20 +84,17 @@ void ServerConnectionHandler::getResponseFromServer(){
     //for debug
     std::string name = "Server";
 
-    // tmp add mutexes
-    CacheNode* cacheNode = cacheRef.getCacheNode(URL);
+    auto& cacheNode = cacheRef.getCacheNode(URL);
     auto& condVar = cacheNode->getAnyDataCondVar();
 
-
     while (recvCount != 0){
-        if ((recvCount = recv(socketFd, buffer, BUF_SIZE, 0)) < 0 && errno != EINPROGRESS) {
+        if ((recvCount = recv(socketFd, buffer, BUF_SIZE, 0)) < 0) {
             throw ProxyException(errors::INTERNAL_ERROR);
         }
 
         std::cout << "SERVER GET: " <<  recvCount << "BYTES" << std::endl;
 
         cacheNode->addData(buffer, recvCount);
-
         pthread_cond_broadcast(&condVar);
     }
 
