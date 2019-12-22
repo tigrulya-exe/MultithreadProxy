@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <sys/socket.h>
+#include <signal.h>
 
 namespace {
     void lockMutex(pthread_mutex_t *mutex, std::string&& mutexName, std::string& role) {
@@ -74,12 +75,43 @@ namespace {
         }
     }
 
-
     void sendError(const char *what, int socketFd) {
         if (send(socketFd, what, strlen(what), 0) < 0) {
             perror("Error sending error response to client");
         }
         std::cout << "ERROR RESPONSE WAS SENT TO: " << socketFd << std::endl;
+    }
+
+
+    void sigAddSet(sigset_t* sigSet, int sig){
+        if (sigaddset(sigSet, sig) < 0){
+            perror("Error setting signal mask");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    sigset_t getSigMask(){
+        sigset_t sigSet;
+
+        if(sigemptyset(&sigSet) < 0){
+            perror("Error setting signal mask");
+            exit(EXIT_FAILURE);
+        }
+
+        sigAddSet(&sigSet, SIGINT);
+//        sigAddSet(&sigSet, SIGTERM);
+        sigAddSet(&sigSet, SIGQUIT);
+
+        return sigSet;
+    }
+
+    void setSigMask(){
+        sigset_t sigSet = getSigMask();
+
+        if(pthread_sigmask(SIG_BLOCK, &sigSet, NULL) < 0){
+            perror("Error setting signal mask");
+            exit(EXIT_FAILURE);
+        }
     }
 }
 

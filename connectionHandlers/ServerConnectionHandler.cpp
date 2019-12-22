@@ -87,6 +87,7 @@ void ServerConnectionHandler::getResponseFromServer(){
     auto& cacheNode = cacheRef.getCacheNode(URL);
     auto& condVar = cacheNode->getAnyDataCondVar();
 
+    int len = 0;
     while (recvCount != 0){
         if ((recvCount = recv(socketFd, buffer, BUF_SIZE, 0)) < 0) {
             throw ProxyException(errors::INTERNAL_ERROR);
@@ -96,10 +97,13 @@ void ServerConnectionHandler::getResponseFromServer(){
 
         cacheNode->addData(buffer, recvCount);
         pthread_cond_broadcast(&condVar);
+        len += recvCount;
     }
 
     cacheNode->setReady();
     pthread_cond_broadcast(&condVar);
+
+//    isCorrectResponseStatus(cacheNode->getData(0,len).data(), len);
 
     std::cout << "GET RESPONSE" << std::endl;
 }
@@ -113,11 +117,13 @@ bool ServerConnectionHandler::isCorrectResponseStatus(char *response, int respon
 
     phr_parse_response(response, responseLength, &version, &status, &body, &bodyLen, headers, &num_headers, 0);
 
+    std::cout << "STATUS" << status << std::endl;
     return status == 200;
 }
 
 void ServerConnectionHandler::handle() {
     try {
+        setSigMask();
         std::cout << "START SERVER THREAD" << std::endl;
         socketFd = initServerConnection();
 

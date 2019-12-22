@@ -9,6 +9,8 @@
 class ClientConnectionHandler {
     bool ready = false;
 
+    pthread_mutex_t readyMutex;
+
     std::string URL;
 
     std::vector<char> clientRequest;
@@ -34,11 +36,15 @@ public:
 
     static void* startThread(void* );
 
-    bool isReady() const;
+    bool isReady();
 
     const std::string &getUrl() const;
 
     void checkRequest(HttpRequest &request);
+
+    virtual ~ClientConnectionHandler();
+
+    void setReady();
 };
 
 #endif

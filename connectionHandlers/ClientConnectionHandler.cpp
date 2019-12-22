@@ -62,8 +62,8 @@ HttpRequest ClientConnectionHandler::parseHttpRequest(std::vector<char>& request
 }
 
 void ClientConnectionHandler::handle() {
-
     try {
+        setSigMask();
         getDataFromClient();
         std::string newRequest;
         HttpRequest request = parseHttpRequest(clientRequest, newRequest);
@@ -85,7 +85,7 @@ void ClientConnectionHandler::handle() {
     }
 
     closeSocket(socketFd);
-    ready = true;
+    setReady();
 }
 
 void ClientConnectionHandler::checkRequest(HttpRequest& request){
@@ -163,8 +163,24 @@ void ClientConnectionHandler::sendDataFromCache() {
     }
 }
 
-bool ClientConnectionHandler::isReady() const {
-    return ready;
+bool ClientConnectionHandler::isReady() {
+    lockMutex(&readyMutex);
+    bool isReady = ready;
+    unlockMutex(&readyMutex);
+
+    return isReady;
 }
 
-ClientConnectionHandler::ClientConnectionHandler(int socketFd, Cache &cache) : cacheRef(cache), socketFd(socketFd) {}
+void ClientConnectionHandler::setReady(){
+    lockMutex(&readyMutex);
+    ready = true;
+    unlockMutex(&readyMutex);
+}
+
+ClientConnectionHandler::ClientConnectionHandler(int socketFd, Cache &cache) : cacheRef(cache), socketFd(socketFd) {
+    initMutex(&readyMutex);
+}
+
+ClientConnectionHandler::~ClientConnectionHandler() {
+    destroyMutex(&readyMutex);
+}

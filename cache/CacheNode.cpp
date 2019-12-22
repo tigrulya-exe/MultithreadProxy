@@ -54,5 +54,6 @@ pthread_cond_t &CacheNode::getAnyDataCondVar() {
 }
 
 CacheNode::~CacheNode() {
+    destroyMutex(&mutex);
     destroyCondVar(&anyDataCondVar);
 }

@@ -6,14 +6,30 @@
 #include "exceptions/ProxyException.h"
 #include "exceptions/SocketClosedException.h"
 #include "httpParser/HttpRequest.h"
+#include "util/SignalHandler.h"
 
-MultiThreadProxy::MultiThreadProxy(int portToListen) : portToListen(portToListen) {}
+bool MultiThreadProxy::isInterrupted = false;
 
-// todo add mutex
-std::vector<pthread_t> threadIds;
+MultiThreadProxy::MultiThreadProxy(int portToListen) :
+    portToListen(portToListen), signalHandler(threadIds, threadIdsMutex) {
+    initMutex(&threadIdsMutex);
+    setSigMask();
+    setSigUsrHandler();
+    initSignalHandlerThread();
+}
+
 // todo add correct error handling
 
-bool isInterrupted = false;
+void MultiThreadProxy::setSigUsrHandler(){
+    struct sigaction sigAction;
+
+    sigAction.sa_handler = interrupt;
+    sigemptyset (&sigAction.sa_mask);
+    sigAction.sa_flags = 0;
+
+    sigaction (SIGUSR1, &sigAction, nullptr);
+}
+
 
 void MultiThreadProxy::start(){
     signal(SIGPIPE, SIG_IGN);
@@ -44,6 +60,11 @@ void MultiThreadProxy::joinThreads(){
 }
 
 void MultiThreadProxy::addNewConnection(int newSocketFd){
+    if(!readyToConnect()){
+        closeSocket(newSocketFd);
+        return;
+    }
+
     auto&& ptr = std::make_shared<ClientConnectionHandler>(newSocketFd, cache);
 
     connectionHandlers.emplace_back(ptr);
@@ -51,9 +72,34 @@ void MultiThreadProxy::addNewConnection(int newSocketFd){
 
     if (pthread_create(&newThreadId, NULL, ClientConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
         perror("Error creating thread");
+        connectionHandlers.remove(connectionHandlers.back());
+        return;
     }
 
+    lockMutex(&threadIdsMutex);
     threadIds.push_back(newThreadId);
+    unlockMutex(&threadIdsMutex);
+}
+
+bool MultiThreadProxy::readyToConnect(){
+    lockMutex(&threadIdsMutex);
+    int currentThreads = threadIds.size();
+    unlockMutex(&threadIdsMutex);
+
+    return currentThreads <= MAX_CONNECTIONS;
+}
+
+void MultiThreadProxy::initSignalHandlerThread(){
+    pthread_t newThreadId;
+
+    if (pthread_create(&newThreadId, NULL, SignalHandler::startThread, (void *) &signalHandler)){
+        perror("Error creating signal handler thread");
+        exit(EXIT_FAILURE);
+    }
+
+    lockMutex(&threadIdsMutex);
+    threadIds.push_back(newThreadId);
+    unlockMutex(&threadIdsMutex);
 }
 
 int MultiThreadProxy::initAcceptSocket(){
@@ -92,4 +138,12 @@ void MultiThreadProxy::checkConnectionHandlers() {
         }
         iter++;
     }
+}
+
+MultiThreadProxy::~MultiThreadProxy() {
+    destroyMutex(&threadIdsMutex);
+}
+
+void MultiThreadProxy::interrupt(int sig) {
+    isInterrupted = true;
 }
