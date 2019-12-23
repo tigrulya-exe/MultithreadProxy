@@ -8,6 +8,10 @@ bool CacheNode::isReady() {
     return isReady;
 }
 
+bool CacheNode::isReadyWithoutLock() {
+    return nodeReady;
+}
+
 void CacheNode::addData(char *newData, int newDataLength) {
     lockMutex(&mutex);
     data.insert(data.end(), newData, newData + newDataLength);

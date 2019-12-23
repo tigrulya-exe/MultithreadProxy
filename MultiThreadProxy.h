@@ -1,4 +1,3 @@
-
 #include "constants.h"
 #include "cache/Cache.h"
 #include "httpParser/HttpRequest.h"
@@ -19,7 +18,7 @@ class MultiThreadProxy {
 
     Cache cache;
 
-    std::list<std::shared_ptr<ClientConnectionHandler>> connectionHandlers;
+    std::list<std::shared_ptr<ConnectionHandler>> connectionHandlers;
 
     std::vector<pthread_t> threadIds;
 
@@ -43,18 +42,19 @@ class MultiThreadProxy {
 
     void setSigUsrHandler();
 
-    void joinThreads();
-
     static void interrupt (int sig);
 
+    bool checkIsServerReady(std::_List_iterator<std::shared_ptr<ConnectionHandler>>& connectionsHandler);
+
+    void removeThreadId(pthread_t threadIdToRemove);
+
 public:
+
     explicit MultiThreadProxy(int portToListen);
 
     void start();
 
     virtual ~MultiThreadProxy();
-
-    void removeThreadId(pthread_t threadIdToRemove);
 };
 
 

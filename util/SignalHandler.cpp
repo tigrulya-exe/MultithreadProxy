@@ -32,7 +32,7 @@ void SignalHandler::sigWait() {
     std::cout << "SIGNAL RECEIVED" << std::endl;
 
 
-//    lockMutex(&mutex);
+    lockMutex(&mutex);
     for(auto& threadId : threadIds){
         if(pthread_cancel(threadId) < 0){
             perror("ERROR CANCELING");
@@ -40,7 +40,7 @@ void SignalHandler::sigWait() {
         std::cout << "SIGKILL WAS SENT TO" << threadId << std::endl;
         fflush(stdout);
     }
-//    unlockMutex(&mutex);
+    unlockMutex(&mutex);
 
     pthread_kill(proxyThreadId, SIGUSR1);
 

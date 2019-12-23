@@ -4,8 +4,9 @@
 #include <string>
 #include <vector>
 #include "../cache/Cache.h"
+#include "ConnectionHandler.h"
 
-class ServerConnectionHandler {
+class ServerConnectionHandler : public ConnectionHandler {
     std::string& URL;
 
     std::vector<char>& clientRequest;
@@ -16,27 +17,27 @@ class ServerConnectionHandler {
 
     int socketFd;
 
-    bool interrupted = true;
-
     int clientSocketFd;
 
     void handle();
-public:
-    ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host, Cache &cacheRef, int clientFd);
-
-    static void* startThread(void* );
 
     int initServerConnection();
 
-    struct sockaddr_in getServerAddress();
+    bool isCorrectResponseStatus(char *response, int responseLength);
 
     void sendRequestToServer();
 
     void getResponseFromServer();
 
-    bool isCorrectResponseStatus(char *response, int responseLength);
+    struct sockaddr_in getServerAddress();
 
-    virtual ~ServerConnectionHandler();
+public:
+
+    ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host, Cache &cacheRef, int clientFd);
+
+    static void* startThread(void* );
+
+    virtual ~ServerConnectionHandler() override;
 };
 
 #endif

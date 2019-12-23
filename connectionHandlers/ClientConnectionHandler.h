@@ -1,15 +1,15 @@
-#ifndef CONNECTIONHANDLER_H
-#define CONNECTIONHANDLER_H
+#ifndef CLIENT_CONNECTIONHANDLER_H
+#define CLIENT_CONNECTIONHANDLER_H
 
 #include <string>
 #include <vector>
 #include "../cache/Cache.h"
 #include "../httpParser/HttpRequest.h"
+#include "ConnectionHandler.h"
+#include "ServerConnectionHandler.h"
 
-class ClientConnectionHandler {
-    bool ready = false;
-
-    pthread_mutex_t readyMutex;
+class ClientConnectionHandler : public ConnectionHandler {
+    std::shared_ptr<ServerConnectionHandler> serverConnectionHandler = nullptr;
 
     std::string URL;
 
@@ -21,13 +21,9 @@ class ClientConnectionHandler {
 
     pthread_mutex_t& threadIdsMutex;
 
-    pthread_t pthreadId;
-
-    bool interrupted = true;
+    int socketFd;
 
     HttpRequest parseHttpRequest(std::vector<char>& request, std::string& newRequest);
-
-    int socketFd;
 
     void handle();
 
@@ -39,24 +35,20 @@ class ClientConnectionHandler {
 
     void initServerThread(std::string &host);
 
+    void checkRequest(HttpRequest &request);
+
+    void handleClientRequest(HttpRequest& request);
+
 public:
     explicit ClientConnectionHandler(int socketFd, Cache& cache, std::vector<pthread_t>& threadIds, pthread_mutex_t& threadIdsMutex);
 
     static void* startThread(void* );
 
-    bool isReady();
+    virtual bool isServerAvailable() override ;
 
-    const std::string &getUrl() const;
+    std::shared_ptr<ConnectionHandler> getServerConnectionHandler();
 
-    void checkRequest(HttpRequest &request);
-
-    virtual ~ClientConnectionHandler();
-
-    void setReady();
-
-    pthread_t getPthreadId();
-
-    void handleClientRequest(HttpRequest& request);
+    virtual ~ClientConnectionHandler() override;
 };
 
 #endif

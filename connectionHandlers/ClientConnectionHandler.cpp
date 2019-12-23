@@ -8,6 +8,7 @@
 
 void *ClientConnectionHandler::startThread(void * connectionHandlerIn) {
     auto* handler = (ClientConnectionHandler *)connectionHandlerIn;
+    handler->setPthreadId();
     handler->handle();
     return nullptr;
 }
@@ -78,12 +79,11 @@ void ClientConnectionHandler::handleClientRequest(HttpRequest& request){
 void ClientConnectionHandler::handle() {
     try {
         setSigMask();
-        pthreadId = pthread_self();
 
         HttpRequest request;
         handleClientRequest(request);
 
-        std::cout << "REQUEST HANDLED" << std::endl;
+        std::cout << "REQUEST HANDLED: " << getPthreadId() << std::endl;
 
         sendDataFromCache();
 
@@ -97,15 +97,18 @@ void ClientConnectionHandler::handle() {
     }
 
     closeSocket(socketFd);
-    interrupted = false;
+    setInterrupted(false);
     setReady();
+}
+
+bool ClientConnectionHandler::isServerAvailable() {
+    return serverConnectionHandler != nullptr;
 }
 
 void ClientConnectionHandler::checkRequest(HttpRequest& request){
     if(request.method == "GET" && request.method == "HEAD"){
         throw ProxyException(errors::NOT_IMPLEMENTED);
     }
-
 }
 
 void ClientConnectionHandler::getDataFromClient() {
@@ -134,27 +137,23 @@ void ClientConnectionHandler::checkUrl(HttpRequest& request){
 void ClientConnectionHandler::initServerThread(std::string& host) {
     pthread_t newThreadId = 0;
 
-    auto* serverConnectionHandler = new ServerConnectionHandler( URL, clientRequest, host, cacheRef, socketFd);
+    serverConnectionHandler = std::make_shared<ServerConnectionHandler>( URL, clientRequest, host, cacheRef, socketFd);
     pthread_attr_t detachedAttr;
     setDetachedAttribute(&detachedAttr);
 
-    if (pthread_create(&newThreadId, NULL, ServerConnectionHandler::startThread, (void *) (serverConnectionHandler))) {
+    if (pthread_create(&newThreadId, NULL, ServerConnectionHandler::startThread, (void *) (serverConnectionHandler.get()))) {
         perror("Error creating thread");
     }
 
     lockMutex(&threadIdsMutex);
     threadIds.push_back(newThreadId);
     unlockMutex(&threadIdsMutex);
-
-    std::cout << "ADD NEW SERVER THREADID: " << newThreadId << std::endl;
 }
 
-const string &ClientConnectionHandler::getUrl() const {
-    return URL;
-}
 
 void ClientConnectionHandler::sendDataFromCache() {
     int sendCount, offset = 0, size = 0;
+    bool cacheNodeReady = false;
 
     auto& cacheNode = cacheRef.getCacheNode(URL);
     auto& cacheNodeMutex = cacheNode->getMutex();
@@ -163,13 +162,11 @@ void ClientConnectionHandler::sendDataFromCache() {
     //for debug
     std::string name = "Client";
 
-    while (!cacheNode->isReady() || offset != cacheNode->getSize()) {
-
+    while (!cacheNodeReady || offset != size) {
 
         lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
-        while (offset == (size = cacheNode->getSizeWithoutLock())) {
-            pthread_testcancel();
-
+        while (offset == (size = cacheNode->getSizeWithoutLock()) &&
+                !(cacheNodeReady = (cacheNode->isReadyWithoutLock()))) {
             pthread_cond_wait(&condVar, &cacheNodeMutex);
         }
         unlockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
@@ -177,8 +174,7 @@ void ClientConnectionHandler::sendDataFromCache() {
         if ((sendCount = send(socketFd,
                               cacheNode->getData(offset, size - offset).data(), size - offset, 0)) < 0) {
             perror("Error sending data to client from cache");
-            pthread_exit(NULL);
-//            throw ProxyException(errors::CACHE_SEND_ERROR);
+            throw ProxyException(errors::CACHE_SEND_ERROR);
         }
 
 //        std::cout << socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << URL
@@ -188,31 +184,15 @@ void ClientConnectionHandler::sendDataFromCache() {
     }
 }
 
-bool ClientConnectionHandler::isReady() {
-    lockMutex(&readyMutex);
-    bool isReady = ready;
-    unlockMutex(&readyMutex);
-
-    return isReady;
-}
-
-void ClientConnectionHandler::setReady(){
-    lockMutex(&readyMutex);
-    ready = true;
-    unlockMutex(&readyMutex);
-}
-
 ClientConnectionHandler::ClientConnectionHandler(int socketFd, Cache &cache, std::vector<pthread_t>& threadIds, pthread_mutex_t& threadIdsMutex)
                                                     : cacheRef(cache), socketFd(socketFd), threadIds(threadIds), threadIdsMutex(threadIdsMutex) {
-    initMutex(&readyMutex);
 }
 
 ClientConnectionHandler::~ClientConnectionHandler() {
-    destroyMutex(&readyMutex);
-    if(interrupted)
+    if(isInterrupted())
         closeSocket(socketFd);
 }
 
-pthread_t ClientConnectionHandler::getPthreadId() {
-    return pthreadId;
+std::shared_ptr<ConnectionHandler> ClientConnectionHandler::getServerConnectionHandler() {
+    return std::shared_ptr<ConnectionHandler>(serverConnectionHandler);
 }

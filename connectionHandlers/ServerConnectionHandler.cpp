@@ -8,13 +8,15 @@
 #include "../httpParser/HttpParser.h"
 
 ServerConnectionHandler::ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host,
-                                                 Cache &cacheRef, int clientFd) : URL(url), clientRequest(clientRequest), host(host),
+                                                 Cache &cacheRef, int clientFd) : ConnectionHandler(), URL(url), clientRequest(clientRequest), host(host),
                                                                     cacheRef(cacheRef), clientSocketFd(clientFd) {}
 
 void *ServerConnectionHandler::startThread(void * handler) {
     auto* serverConnectionHandler = (ServerConnectionHandler *) handler;
+    serverConnectionHandler->setPthreadId();
     serverConnectionHandler->handle();
-    delete (serverConnectionHandler);
+    std::cout << "STOR SERVER THREAD: " << serverConnectionHandler->getPthreadId() << std::endl;
+//    delete (serverConnectionHandler);
     return nullptr;
 }
 
@@ -123,14 +125,14 @@ bool ServerConnectionHandler::isCorrectResponseStatus(char *response, int respon
 void ServerConnectionHandler::handle() {
     try {
         setSigMask();
-        std::cout << "START SERVER THREAD" << std::endl;
+        std::cout << "START SERVER THREAD: " << getPthreadId() << std::endl;
         socketFd = initServerConnection();
 
         sendRequestToServer();
 
         getResponseFromServer();
         closeSocket(socketFd);
-        interrupted = false;
+        setInterrupted(false);
     }
     catch (ProxyException& exception){
         sendError(exception.what(), clientSocketFd);
@@ -138,9 +140,11 @@ void ServerConnectionHandler::handle() {
     catch (std::exception& exception){
         std::cerr << exception.what() << std::endl;
     }
+
+    setReady();
 }
 
 ServerConnectionHandler::~ServerConnectionHandler() {
-    if(interrupted)
+    if(isInterrupted())
         closeSocket(socketFd);
 }

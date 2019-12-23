@@ -83,8 +83,6 @@ void MultiThreadProxy::addNewConnection(int newSocketFd){
     lockMutex(&threadIdsMutex);
     threadIds.push_back(newThreadId);
     unlockMutex(&threadIdsMutex);
-
-    std::cout << "NEW THREAD: " << newThreadId << std::endl;
 }
 
 bool MultiThreadProxy::readyToConnect(){
@@ -139,11 +137,18 @@ void MultiThreadProxy::removeThreadId(pthread_t threadIdToRemove){
     unlockMutex(&threadIdsMutex);
 }
 
+bool MultiThreadProxy::checkIsServerReady(std::_List_iterator<std::shared_ptr<ConnectionHandler>>& connectionsHandler){
+    if((*connectionsHandler)->isServerAvailable()){
+        auto* connectionHandler = dynamic_cast<ClientConnectionHandler*> (connectionsHandler->get());
+        connectionHandlers.push_back(connectionHandler->getServerConnectionHandler()) ;
+    }
+}
+
 void MultiThreadProxy::checkConnectionHandlers() {
     for (auto iter = connectionHandlers.begin();iter != connectionHandlers.end(); ) {
         if ((*iter) ->isReady()) {
-            std::cout << "REMOVED: " << (*iter) ->getUrl() << std::endl;
             removeThreadId((*iter)->getPthreadId());
+            checkIsServerReady(iter);
             iter = connectionHandlers.erase(iter);
             continue;
         }

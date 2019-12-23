@@ -36,6 +36,8 @@ public:
     virtual ~CacheNode();
 
     int getSizeWithoutLock();
+
+    bool isReadyWithoutLock();
 };
 
 
