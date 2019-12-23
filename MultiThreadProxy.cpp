@@ -58,20 +58,6 @@ void MultiThreadProxy::start(){
         checkConnectionHandlers();
     }
 
-//    joinThreads();
-}
-
-void MultiThreadProxy::joinThreads(){
-    std::cout << std::endl << "Stopping server..." << std::endl;
-    fflush(stdout);
-
-    for(auto& threadId : threadIds){
-        std::cout << std::endl << "WAITING FOR: " << threadId << std::endl;
-        fflush(stdout);
-        if (pthread_join(threadId,NULL)){
-            perror("Error waiting thread");
-        }
-    }
 }
 
 void MultiThreadProxy::addNewConnection(int newSocketFd){
@@ -84,6 +70,9 @@ void MultiThreadProxy::addNewConnection(int newSocketFd){
 
     connectionHandlers.emplace_back(ptr);
     pthread_t newThreadId = 0;
+
+    pthread_attr_t detachedAttr;
+    setDetachedAttribute(&detachedAttr);
 
     if (pthread_create(&newThreadId, NULL, ClientConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
         perror("Error creating thread");
@@ -113,10 +102,6 @@ void MultiThreadProxy::initSignalHandlerThread(){
         perror("Error creating signal handler thread");
         exit(EXIT_FAILURE);
     }
-
-//    lockMutex(&threadIdsMutex);
-//    threadIds.push_back(newThreadId);
-//    unlockMutex(&threadIdsMutex);
 }
 
 int MultiThreadProxy::initAcceptSocket(){
@@ -168,6 +153,7 @@ void MultiThreadProxy::checkConnectionHandlers() {
 
 MultiThreadProxy::~MultiThreadProxy() {
     destroyMutex(&threadIdsMutex);
+    std::cout << "DESTRUCT" << std::endl;
     connectionHandlers.clear();
 }
 

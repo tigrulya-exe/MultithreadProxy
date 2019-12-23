@@ -61,34 +61,34 @@ HttpRequest ClientConnectionHandler::parseHttpRequest(std::vector<char>& request
     return httpRequest;
 }
 
+void ClientConnectionHandler::handleClientRequest(HttpRequest& request){
+    getDataFromClient();
+
+    std::string newRequest;
+    request = parseHttpRequest(clientRequest, newRequest);
+    checkRequest(request);
+
+    clientRequest.clear();
+    clientRequest = std::vector<char >(newRequest.begin(), newRequest.end());
+
+    URL = request.path;
+    checkUrl(request);
+}
+
 void ClientConnectionHandler::handle() {
     try {
         setSigMask();
-
         pthreadId = pthread_self();
 
-        pthread_testcancel();
-
-        getDataFromClient();
-
-        pthread_testcancel();
-
-        std::string newRequest;
-        HttpRequest request = parseHttpRequest(clientRequest, newRequest);
-        checkRequest(request);
-        clientRequest.clear();
-        clientRequest = std::vector<char >(newRequest.begin(), newRequest.end());
-        URL = request.path;
+        HttpRequest request;
+        handleClientRequest(request);
 
         std::cout << "REQUEST HANDLED" << std::endl;
 
-        checkUrl(request);
-
-
         sendDataFromCache();
 
-
         std::cout << socketFd <<  " finish: " << URL << std::endl;
+
     } catch (ProxyException& exception){
         sendError(exception.what(), socketFd);
     }
@@ -117,8 +117,8 @@ void ClientConnectionHandler::getDataFromClient() {
             throw ProxyException(errors::INTERNAL_ERROR);
         }
 
-        if(recvCount == 0)
-            throw SocketClosedException();
+//        if(recvCount == 0)
+//            throw SocketClosedException();
 
         clientRequest.insert(clientRequest.end(), buffer, buffer + recvCount);
     }while (!isEndOfRequest(buffer, recvCount));
@@ -135,6 +135,9 @@ void ClientConnectionHandler::initServerThread(std::string& host) {
     pthread_t newThreadId = 0;
 
     auto* serverConnectionHandler = new ServerConnectionHandler( URL, clientRequest, host, cacheRef, socketFd);
+    pthread_attr_t detachedAttr;
+    setDetachedAttribute(&detachedAttr);
+
     if (pthread_create(&newThreadId, NULL, ServerConnectionHandler::startThread, (void *) (serverConnectionHandler))) {
         perror("Error creating thread");
     }
@@ -143,7 +146,7 @@ void ClientConnectionHandler::initServerThread(std::string& host) {
     threadIds.push_back(newThreadId);
     unlockMutex(&threadIdsMutex);
 
-    std::cout << "ADD NEW SERVER THREADID: " << newThreadId;
+    std::cout << "ADD NEW SERVER THREADID: " << newThreadId << std::endl;
 }
 
 const string &ClientConnectionHandler::getUrl() const {

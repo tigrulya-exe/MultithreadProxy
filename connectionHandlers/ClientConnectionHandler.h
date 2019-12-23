@@ -55,6 +55,8 @@ public:
     void setReady();
 
     pthread_t getPthreadId();
+
+    void handleClientRequest(HttpRequest& request);
 };
 
 #endif

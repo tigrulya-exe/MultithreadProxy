@@ -34,8 +34,7 @@ void SignalHandler::sigWait() {
 
 //    lockMutex(&mutex);
     for(auto& threadId : threadIds){
-//        pthread_kill(threadId, SIGUSR2);
-        if(pthread_cancel(threadId)){
+        if(pthread_cancel(threadId) < 0){
             perror("ERROR CANCELING");
         }
         std::cout << "SIGKILL WAS SENT TO" << threadId << std::endl;

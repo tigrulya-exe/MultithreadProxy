@@ -113,6 +113,18 @@ namespace {
             exit(EXIT_FAILURE);
         }
     }
+
+    void setDetachedAttribute(pthread_attr_t* attr){
+        if(pthread_attr_init(attr) < 0){
+            perror("Error initialising attribute");
+            exit(EXIT_FAILURE);
+        }
+
+        if(pthread_attr_setdetachstate(attr,PTHREAD_CREATE_DETACHED)){
+            perror("Error setting attribute");
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 #endif
