@@ -28,19 +28,16 @@ void MultiThreadProxy::setSigUsrHandler(){
 
     sigaction (SIGUSR1, &sigAction, nullptr);
 
-//    sigAction.sa_handler = SIG_IGN;
-//    sigaction (SIGPIPE, &sigAction, nullptr);
+    sigAction.sa_handler = SIG_IGN;
+    sigaction (SIGPIPE, &sigAction, nullptr);
 }
 
 void MultiThreadProxy::start(){
-    signal(SIGPIPE, SIG_IGN);
     acceptSocketFd = initAcceptSocket();
     int newSocketFd = 0;
 
     while (!isInterrupted){
         newSocketFd = accept(acceptSocketFd, nullptr, nullptr);
-
-        std::cout << "MAIN LOOP" << std::endl;
 
         if(newSocketFd < 0){
             perror("Error accepting connection");

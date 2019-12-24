@@ -22,11 +22,9 @@ void *ServerConnectionHandler::startThread(void * handler) {
     serverConnectionHandler->handle();
 
 #ifdef DEBUG
-//    std::cout << "STOP SERVER THREAD: " << pthreadId << std::endl;
+    std::cout << "STOP SERVER THREAD: " << pthreadId << std::endl;
 #endif
-
-    pthread_exit(NULL);
-//    return NULL;
+    return NULL;
 }
 
 int ServerConnectionHandler::initServerConnection(){
@@ -165,7 +163,6 @@ void ServerConnectionHandler::handle() {
     }
 
     setReady();
-//    destroyCondVar(&cacheRef.getCacheNode(URL)->getAnyDataCondVar());
 }
 
 ServerConnectionHandler::~ServerConnectionHandler() {

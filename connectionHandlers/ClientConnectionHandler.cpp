@@ -6,15 +6,13 @@
 #include "../exceptions/SocketClosedException.h"
 #include "ServerConnectionHandler.h"
 
+//CC -lrt -lxnet -lnsl cache/*.cpp connectionHandlers/*.cpp util/*.cpp
+// httpParser/*.c  *.cpp -std=c++11  -lgcc_s -lc -lpthread -m32  -o proxy -std=c++11
+
 void *ClientConnectionHandler::startThread(void * connectionHandlerIn) {
     auto* handler = (ClientConnectionHandler *)connectionHandlerIn;
     handler->setPthreadId();
-    std::cout << "START CLIENT: " << handler->getPthreadId() << std::endl;
-
     handler->handle();
-    std::cout << "END CLIENT: " << handler->getPthreadId() << std::endl;
-    pthread_exit(NULL);
-
     return NULL;
 }
 
@@ -109,7 +107,7 @@ void ClientConnectionHandler::handle() {
 }
 
 bool ClientConnectionHandler::isServerHandlerInitiator() {
-    return serverConnectionHandler != NULL;
+    return serverConnectionHandler.get() != NULL;
 }
 
 void ClientConnectionHandler::checkRequest(HttpRequest& request){
@@ -127,8 +125,8 @@ void ClientConnectionHandler::getDataFromClient() {
             throw ProxyException(errors::INTERNAL_ERROR);
         }
 
-//        if(recvCount == 0)
-//            throw SocketClosedException();
+        if(recvCount == 0)
+            break;
 
         clientRequest.insert(clientRequest.end(), buffer, buffer + recvCount);
     }while (!isEndOfRequest(buffer, recvCount));
