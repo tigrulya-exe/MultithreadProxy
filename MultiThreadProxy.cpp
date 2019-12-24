@@ -19,8 +19,6 @@ MultiThreadProxy::MultiThreadProxy(int portToListen) :
     initSignalHandlerThread();
 }
 
-// todo add correct error handling
-
 void MultiThreadProxy::setSigUsrHandler(){
     struct sigaction sigAction;
 
@@ -29,6 +27,9 @@ void MultiThreadProxy::setSigUsrHandler(){
     sigAction.sa_flags = 0;
 
     sigaction (SIGUSR1, &sigAction, nullptr);
+
+//    sigAction.sa_handler = SIG_IGN;
+//    sigaction (SIGPIPE, &sigAction, nullptr);
 }
 
 void MultiThreadProxy::start(){
@@ -39,6 +40,8 @@ void MultiThreadProxy::start(){
     while (!isInterrupted){
         newSocketFd = accept(acceptSocketFd, nullptr, nullptr);
 
+        std::cout << "MAIN LOOP" << std::endl;
+
         if(newSocketFd < 0){
             perror("Error accepting connection");
             continue;
@@ -47,7 +50,6 @@ void MultiThreadProxy::start(){
         addNewConnection(newSocketFd);
         checkConnectionHandlers();
     }
-
 }
 
 void MultiThreadProxy::addNewConnection(int newSocketFd){
@@ -64,7 +66,7 @@ void MultiThreadProxy::addNewConnection(int newSocketFd){
     pthread_attr_t detachedAttr;
     setDetachedAttribute(&detachedAttr);
 
-    if (pthread_create(&newThreadId, NULL, ClientConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
+    if (pthread_create(&newThreadId, &detachedAttr, ClientConnectionHandler::startThread, (void *) (connectionHandlers.back().get()))){
         perror("Error creating thread");
         connectionHandlers.remove(connectionHandlers.back());
         return;

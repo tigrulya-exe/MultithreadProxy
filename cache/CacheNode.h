@@ -15,6 +15,9 @@ class CacheNode {
 
     pthread_cond_t anyDataCondVar;
 
+    bool condVarDestroyed = false;
+
+    int listenersCount = 0;
 public:
 
     CacheNode();
@@ -34,6 +37,10 @@ public:
     int getSizeWithoutLock();
 
     bool isReadyWithoutLock();
+
+    void addListener();
+
+    void removeListener();
 };
 
 

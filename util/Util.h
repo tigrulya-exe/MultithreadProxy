@@ -12,7 +12,7 @@
 
 #define DEBUG
 #define DEBUG_GOT_DATA
-//#define DEBUG_CANCEL_THREAD_LIST
+#define DEBUG_CANCEL_THREAD_LIST
 
 namespace {
     void lockMutex(pthread_mutex_t *mutex, std::string&& mutexName, std::string& role) {

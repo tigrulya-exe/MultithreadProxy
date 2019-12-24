@@ -43,5 +43,28 @@ pthread_cond_t &CacheNode::getAnyDataCondVar() {
 
 CacheNode::~CacheNode() {
     destroyMutex(&mutex);
-    destroyCondVar(&anyDataCondVar);
+    if(!condVarDestroyed){
+        destroyCondVar(&anyDataCondVar);
+    }
 }
+
+void CacheNode::removeListener() {
+    lockMutex(&mutex);
+    --listenersCount;
+
+    if(!condVarDestroyed && listenersCount == 0 && nodeReady){
+        condVarDestroyed = true;
+        destroyCondVar(&anyDataCondVar);
+        std::cout << "CV DESTROYED" << std::endl;
+        fflush(stdout);
+    }
+
+    unlockMutex(&mutex);
+}
+
+void CacheNode::addListener() {
+    lockMutex(&mutex);
+    ++listenersCount;
+    unlockMutex(&mutex);
+}
+

@@ -25,7 +25,8 @@ void *ServerConnectionHandler::startThread(void * handler) {
 //    std::cout << "STOP SERVER THREAD: " << pthreadId << std::endl;
 #endif
 
-    return nullptr;
+    pthread_exit(NULL);
+//    return NULL;
 }
 
 int ServerConnectionHandler::initServerConnection(){
@@ -102,6 +103,7 @@ void ServerConnectionHandler::getResponseFromServer(){
 
     auto* cacheNode = cacheRef.getCacheNode(URL);
     auto& condVar = cacheNode->getAnyDataCondVar();
+    auto& cacheNodeMutex = cacheNode->getMutex();
 
     int len = 0;
     while (recvCount != 0){
@@ -112,10 +114,17 @@ void ServerConnectionHandler::getResponseFromServer(){
         cacheNode->addData(buffer, recvCount);
         pthread_cond_broadcast(&condVar);
         len += recvCount;
+
+        std::cout << "SERVER LOOP" <<std::endl;
+        fflush(stdout);
     }
 
     cacheNode->setReady();
+
+    lockMutex(&cacheNodeMutex);
     pthread_cond_broadcast(&condVar);
+    unlockMutex(&cacheNodeMutex);
+
 
 //    isCorrectResponseStatus(cacheNode->getData(0,len).data(), len);
 #ifdef DEBUG
@@ -156,6 +165,7 @@ void ServerConnectionHandler::handle() {
     }
 
     setReady();
+//    destroyCondVar(&cacheRef.getCacheNode(URL)->getAnyDataCondVar());
 }
 
 ServerConnectionHandler::~ServerConnectionHandler() {
