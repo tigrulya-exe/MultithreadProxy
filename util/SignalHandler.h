@@ -3,7 +3,6 @@
 
 #include <list>
 #include <vector>
-#include <bits/pthreadtypes.h>
 
 class SignalHandler {
     std::vector<pthread_t>& threadIds;

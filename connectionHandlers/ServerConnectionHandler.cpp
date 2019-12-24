@@ -9,7 +9,7 @@
 
 ServerConnectionHandler::ServerConnectionHandler(std::string &url, std::vector<char> &clientRequest, std::string &host,
                                                  Cache &cacheRef, int clientFd) : ConnectionHandler(), URL(url), clientRequest(clientRequest), host(host),
-                                                                    cacheRef(cacheRef), clientSocketFd(clientFd) {}
+                                                                                  cacheRef(cacheRef), clientSocketFd(clientFd) {}
 
 void *ServerConnectionHandler::startThread(void * handler) {
     auto* serverConnectionHandler = (ServerConnectionHandler *) handler;
@@ -100,7 +100,7 @@ void ServerConnectionHandler::getResponseFromServer(){
     int recvCount = -1;
     char buffer[BUF_SIZE];
 
-    auto& cacheNode = cacheRef.getCacheNode(URL);
+    auto* cacheNode = cacheRef.getCacheNode(URL);
     auto& condVar = cacheNode->getAnyDataCondVar();
 
     int len = 0;
@@ -164,7 +164,7 @@ ServerConnectionHandler::~ServerConnectionHandler() {
 }
 
 void ServerConnectionHandler::handleError(const char* error) {
-    auto& cacheNode = cacheRef.getCacheNode(URL);
+    auto* cacheNode = cacheRef.getCacheNode(URL);
     cacheNode->setReady();
     cacheNode->addData(error, strlen(error));
     pthread_cond_broadcast(&cacheNode->getAnyDataCondVar());

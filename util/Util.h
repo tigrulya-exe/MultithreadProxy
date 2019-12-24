@@ -7,12 +7,12 @@
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
-#include <sys/socket.h>
 #include <signal.h>
+#include <sys/socket.h>
 
 #define DEBUG
 #define DEBUG_GOT_DATA
-#define DEBUG_CANCEL_THREAD_LIST
+//#define DEBUG_CANCEL_THREAD_LIST
 
 namespace {
     void lockMutex(pthread_mutex_t *mutex, std::string&& mutexName, std::string& role) {

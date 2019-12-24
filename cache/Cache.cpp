@@ -7,17 +7,26 @@ bool Cache::contains(std::string& url) {
 
     return contains;
 }
+//
+//std::shared_ptr<CacheNode>& Cache::getCacheNode(std::string& url){
+//    lockMutex(&mutex);
+//    auto* nodeRef = urlToCacheNode[url];
+//    unlockMutex(&mutex);
+//    return nodeRef;
+//}
 
-std::shared_ptr<CacheNode>& Cache::getCacheNode(std::string& url){
+
+CacheNode* Cache::getCacheNode(std::string& url){
     lockMutex(&mutex);
-    auto& nodeRef = urlToCacheNode[url];
+    auto* nodeRef = urlToCacheNode[url];
     unlockMutex(&mutex);
     return nodeRef;
 }
 
+
 void Cache::addCacheNode(std::string& path){
     lockMutex(&mutex);
-    urlToCacheNode.emplace(path, std::make_shared<CacheNode>());
+    urlToCacheNode.emplace(path, new CacheNode());
     unlockMutex(&mutex);
 }
 
@@ -26,6 +35,10 @@ Cache::Cache() {
 }
 
 Cache::~Cache() {
+    for(auto& cacheNode : urlToCacheNode){
+        delete(cacheNode.second);
+    }
+
     destroyMutex(&mutex);
 }
 

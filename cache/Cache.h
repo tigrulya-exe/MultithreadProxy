@@ -11,13 +11,14 @@ class Cache{
 private:
     pthread_mutex_t mutex;
 
-    std::map<std::string, std::shared_ptr<CacheNode>> urlToCacheNode;
+    std::map<std::string, CacheNode* > urlToCacheNode;
+
 public:
     Cache();
 
     bool contains(std::string& url);
 
-    std::shared_ptr<CacheNode>& getCacheNode(std::string &url);
+    CacheNode * getCacheNode(std::string &url);
 
     void addCacheNode(std::string &path);
 

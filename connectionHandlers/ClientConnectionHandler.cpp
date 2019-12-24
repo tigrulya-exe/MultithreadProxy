@@ -104,7 +104,7 @@ void ClientConnectionHandler::handle() {
 }
 
 bool ClientConnectionHandler::isServerHandlerInitiator() {
-    return serverConnectionHandler != nullptr;
+    return serverConnectionHandler != NULL;
 }
 
 void ClientConnectionHandler::checkRequest(HttpRequest& request){
@@ -157,7 +157,7 @@ void ClientConnectionHandler::sendDataFromCache() {
     int sendCount, offset = 0, size = 0;
     bool cacheNodeReady = false;
 
-    auto& cacheNode = cacheRef.getCacheNode(URL);
+    auto* cacheNode = cacheRef.getCacheNode(URL);
     auto& cacheNodeMutex = cacheNode->getMutex();
     auto& condVar = cacheNode->getAnyDataCondVar();
 
