@@ -9,9 +9,6 @@
 
 class Cache{
 private:
-    // for debug
-    std::string name = "Cache";
-
     pthread_mutex_t mutex;
 
     std::map<std::string, std::shared_ptr<CacheNode>> urlToCacheNode;
@@ -23,6 +20,8 @@ public:
     std::shared_ptr<CacheNode>& getCacheNode(std::string &url);
 
     void addCacheNode(std::string &path);
+
+    void removeCacheNode(std::string &path);
 
     virtual ~Cache();
 };

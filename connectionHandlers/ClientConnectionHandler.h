@@ -44,7 +44,7 @@ public:
 
     static void* startThread(void* );
 
-    virtual bool isServerAvailable() override ;
+    virtual bool isServerHandlerInitiator() override ;
 
     std::shared_ptr<ConnectionHandler> getServerConnectionHandler();
 

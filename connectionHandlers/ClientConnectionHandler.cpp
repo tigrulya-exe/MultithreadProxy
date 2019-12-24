@@ -83,11 +83,13 @@ void ClientConnectionHandler::handle() {
         HttpRequest request;
         handleClientRequest(request);
 
+#ifdef DEBUG
         std::cout << "REQUEST HANDLED: " << getPthreadId() << std::endl;
+#endif
 
         sendDataFromCache();
 
-        std::cout << socketFd <<  " finish: " << URL << std::endl;
+        std::cout << "[" << socketFd <<  "] finish: " << URL << std::endl;
 
     } catch (ProxyException& exception){
         sendError(exception.what(), socketFd);
@@ -101,7 +103,7 @@ void ClientConnectionHandler::handle() {
     setReady();
 }
 
-bool ClientConnectionHandler::isServerAvailable() {
+bool ClientConnectionHandler::isServerHandlerInitiator() {
     return serverConnectionHandler != nullptr;
 }
 
@@ -159,17 +161,14 @@ void ClientConnectionHandler::sendDataFromCache() {
     auto& cacheNodeMutex = cacheNode->getMutex();
     auto& condVar = cacheNode->getAnyDataCondVar();
 
-    //for debug
-    std::string name = "Client";
-
     while (!cacheNodeReady || offset != size) {
 
-        lockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
+        lockMutex(&cacheNodeMutex);
         while (offset == (size = cacheNode->getSizeWithoutLock()) &&
                 !(cacheNodeReady = (cacheNode->isReadyWithoutLock()))) {
             pthread_cond_wait(&condVar, &cacheNodeMutex);
         }
-        unlockMutex(&cacheNodeMutex, "cacheNodeMutex", name);
+        unlockMutex(&cacheNodeMutex);
 
         if ((sendCount = send(socketFd,
                               cacheNode->getData(offset, size - offset).data(), size - offset, 0)) < 0) {
@@ -177,8 +176,10 @@ void ClientConnectionHandler::sendDataFromCache() {
             throw ProxyException(errors::CACHE_SEND_ERROR);
         }
 
-//        std::cout << socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << URL
-//                  << std::endl;
+#ifdef DEBUG_GOT_DATA
+        std::cout << socketFd << " : GOT DATA ( " << sendCount << " BYTES) FROM CACHE:" << URL
+                  << std::endl;
+#endif
 
         offset += sendCount;
     }

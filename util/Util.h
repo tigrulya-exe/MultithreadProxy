@@ -10,6 +10,10 @@
 #include <sys/socket.h>
 #include <signal.h>
 
+#define DEBUG
+#define DEBUG_GOT_DATA
+#define DEBUG_CANCEL_THREAD_LIST
+
 namespace {
     void lockMutex(pthread_mutex_t *mutex, std::string&& mutexName, std::string& role) {
 //        std::cout << role << " LOCK: " << mutexName << std::endl;

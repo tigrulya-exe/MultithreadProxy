@@ -11,12 +11,6 @@
 
 bool MultiThreadProxy::isInterrupted = false;
 
-void pthreadExit(int signal){
-    std::cout << "EXIT" << std::endl;
-
-    pthread_exit(EXIT_SUCCESS);
-}
-
 MultiThreadProxy::MultiThreadProxy(int portToListen) :
     portToListen(portToListen), signalHandler(threadIds, threadIdsMutex, pthread_self()) {
     initMutex(&threadIdsMutex);
@@ -35,11 +29,7 @@ void MultiThreadProxy::setSigUsrHandler(){
     sigAction.sa_flags = 0;
 
     sigaction (SIGUSR1, &sigAction, nullptr);
-
-    sigAction.sa_handler = pthreadExit;
-    sigaction (SIGUSR2, &sigAction, nullptr);
 }
-
 
 void MultiThreadProxy::start(){
     signal(SIGPIPE, SIG_IGN);
@@ -138,14 +128,18 @@ void MultiThreadProxy::removeThreadId(pthread_t threadIdToRemove){
 }
 
 bool MultiThreadProxy::checkIsServerReady(std::_List_iterator<std::shared_ptr<ConnectionHandler>>& connectionsHandler){
-    if((*connectionsHandler)->isServerAvailable()){
+    if((*connectionsHandler)->isServerHandlerInitiator()){
         auto* connectionHandler = dynamic_cast<ClientConnectionHandler*> (connectionsHandler->get());
-        connectionHandlers.push_back(connectionHandler->getServerConnectionHandler()) ;
+        std::shared_ptr<ConnectionHandler>&& serverConnectionHandler = connectionHandler->getServerConnectionHandler();
+        if(!serverConnectionHandler->isReady())
+            connectionHandlers.push_back(serverConnectionHandler);
+        else
+            removeThreadId(serverConnectionHandler->getPthreadId());
     }
 }
 
 void MultiThreadProxy::checkConnectionHandlers() {
-    for (auto iter = connectionHandlers.begin();iter != connectionHandlers.end(); ) {
+    for (auto iter = connectionHandlers.begin(); iter != connectionHandlers.end(); ) {
         if ((*iter) ->isReady()) {
             removeThreadId((*iter)->getPthreadId());
             checkIsServerReady(iter);
@@ -158,7 +152,6 @@ void MultiThreadProxy::checkConnectionHandlers() {
 
 MultiThreadProxy::~MultiThreadProxy() {
     destroyMutex(&threadIdsMutex);
-    std::cout << "DESTRUCT" << std::endl;
     connectionHandlers.clear();
 }
 

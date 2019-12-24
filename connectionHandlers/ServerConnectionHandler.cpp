@@ -13,10 +13,18 @@ ServerConnectionHandler::ServerConnectionHandler(std::string &url, std::vector<c
 
 void *ServerConnectionHandler::startThread(void * handler) {
     auto* serverConnectionHandler = (ServerConnectionHandler *) handler;
+
     serverConnectionHandler->setPthreadId();
+#ifdef DEBUG
+    pthread_t pthreadId = serverConnectionHandler->getPthreadId();
+    std::cout << "START SERVER THREAD: " << pthreadId  << std::endl;
+#endif
     serverConnectionHandler->handle();
-    std::cout << "STOR SERVER THREAD: " << serverConnectionHandler->getPthreadId() << std::endl;
-//    delete (serverConnectionHandler);
+
+#ifdef DEBUG
+//    std::cout << "STOP SERVER THREAD: " << pthreadId << std::endl;
+#endif
+
     return nullptr;
 }
 
@@ -27,11 +35,16 @@ int ServerConnectionHandler::initServerConnection(){
         throw ProxyException(errors::SERVER_CONNECT);
     }
 
+#ifdef DEBUG
     std::cout << "RESOLVING ADDRESS" << std::endl;
-    sockaddr_in addressToConnect = getServerAddress();
-    std::cout << "RESOLVED" << std::endl;
+#endif
 
-    std::cout << "CONNECTING" << std::endl;
+    sockaddr_in addressToConnect = getServerAddress();
+
+#ifdef DEBUG
+    std::cout << "RESOLVED\nCONNECTING" << std::endl;
+#endif
+
     fcntl(serverSockFd, F_SETFL, fcntl(serverSockFd, F_GETFL, 0) | O_NONBLOCK);
 
     if(connect(serverSockFd, (struct sockaddr *)& addressToConnect, sizeof(addressToConnect)) == -1 && errno != EINPROGRESS){
@@ -39,7 +52,10 @@ int ServerConnectionHandler::initServerConnection(){
     }
 
     fcntl(serverSockFd, F_SETFL,  fcntl(serverSockFd, F_GETFL, 0) & ~O_NONBLOCK);
+
+#ifdef DEBUG
     std::cout << "CONNECTED" << std::endl;
+#endif
 
     return serverSockFd;
 }
@@ -69,21 +85,20 @@ sockaddr_in ServerConnectionHandler::getServerAddress() {
 }
 
 void ServerConnectionHandler::sendRequestToServer(){
-    std::cout << "SENDING: " << clientRequest.size() << std::endl;
 
     if (send(socketFd, clientRequest.data(), clientRequest.size(), 0) < 0) {
         throw ProxyException(errors::SERVER_CONNECT);
     }
 
+#ifdef DEBUG
     std::cout << "REQUEST TO " << URL << " WAS SENT" << std::endl;
+#endif
+
 }
 
 void ServerConnectionHandler::getResponseFromServer(){
     int recvCount = -1;
     char buffer[BUF_SIZE];
-
-    //for debug
-    std::string name = "Server";
 
     auto& cacheNode = cacheRef.getCacheNode(URL);
     auto& condVar = cacheNode->getAnyDataCondVar();
@@ -94,8 +109,6 @@ void ServerConnectionHandler::getResponseFromServer(){
             throw ProxyException(errors::INTERNAL_ERROR);
         }
 
-//        std::cout << "SERVER GET: " <<  recvCount << "BYTES" << std::endl;
-
         cacheNode->addData(buffer, recvCount);
         pthread_cond_broadcast(&condVar);
         len += recvCount;
@@ -105,8 +118,10 @@ void ServerConnectionHandler::getResponseFromServer(){
     pthread_cond_broadcast(&condVar);
 
 //    isCorrectResponseStatus(cacheNode->getData(0,len).data(), len);
+#ifdef DEBUG
+    std::cout << "FULL RESPONSE" << std::endl;
+#endif
 
-    std::cout << "GET RESPONSE" << std::endl;
 }
 
 bool ServerConnectionHandler::isCorrectResponseStatus(char *response, int responseLength) {
@@ -125,7 +140,6 @@ bool ServerConnectionHandler::isCorrectResponseStatus(char *response, int respon
 void ServerConnectionHandler::handle() {
     try {
         setSigMask();
-        std::cout << "START SERVER THREAD: " << getPthreadId() << std::endl;
         socketFd = initServerConnection();
 
         sendRequestToServer();
@@ -135,7 +149,7 @@ void ServerConnectionHandler::handle() {
         setInterrupted(false);
     }
     catch (ProxyException& exception){
-        sendError(exception.what(), clientSocketFd);
+        handleError(exception.what());
     }
     catch (std::exception& exception){
         std::cerr << exception.what() << std::endl;
@@ -147,4 +161,11 @@ void ServerConnectionHandler::handle() {
 ServerConnectionHandler::~ServerConnectionHandler() {
     if(isInterrupted())
         closeSocket(socketFd);
+}
+
+void ServerConnectionHandler::handleError(const char* error) {
+    auto& cacheNode = cacheRef.getCacheNode(URL);
+    cacheNode->setReady();
+    cacheNode->addData(error, strlen(error));
+    pthread_cond_broadcast(&cacheNode->getAnyDataCondVar());
 }

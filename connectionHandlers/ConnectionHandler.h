@@ -1,7 +1,5 @@
-
 #ifndef CONNECTIONHANDLER_H
 #define CONNECTIONHANDLER_H
-
 
 #include "../cache/Cache.h"
 
@@ -20,7 +18,7 @@ protected:
     bool isInterrupted() const;
 
 public:
-    virtual bool isServerAvailable();
+    virtual bool isServerHandlerInitiator();
 
     ConnectionHandler();
 

@@ -19,11 +19,7 @@ public:
 
     CacheNode();
 
-    bool isReady();
-
-    void addData(char *newData, int newDataLength);
-
-    int getSize();
+    void addData(const char *newData, int newDataLength);
 
     std::vector<char> getData(int offset, int length);
 

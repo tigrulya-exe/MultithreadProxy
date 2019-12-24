@@ -1,18 +1,10 @@
 #include "CacheNode.h"
 
-bool CacheNode::isReady() {
-    lockMutex(&mutex);
-    bool isReady = nodeReady;
-    unlockMutex(&mutex);
-
-    return isReady;
-}
-
 bool CacheNode::isReadyWithoutLock() {
     return nodeReady;
 }
 
-void CacheNode::addData(char *newData, int newDataLength) {
+void CacheNode::addData(const char *newData, int newDataLength) {
     lockMutex(&mutex);
     data.insert(data.end(), newData, newData + newDataLength);
     unlockMutex(&mutex);
@@ -24,14 +16,6 @@ std::vector<char> CacheNode::getData(int offset, int length) {
     unlockMutex(&mutex);
 
     return subVector;
-}
-
-int CacheNode::getSize(){
-    lockMutex(&mutex);
-    auto size = data.size();
-    unlockMutex(&mutex);
-
-    return size;
 }
 
 int CacheNode::getSizeWithoutLock(){

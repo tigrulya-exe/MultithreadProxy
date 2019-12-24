@@ -35,7 +35,7 @@ bool ConnectionHandler::isInterrupted() const {
     return interrupted;
 }
 
-bool ConnectionHandler::isServerAvailable() {
+bool ConnectionHandler::isServerHandlerInitiator() {
     return false;
 }
 

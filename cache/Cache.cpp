@@ -1,24 +1,24 @@
 #include "Cache.h"
 
 bool Cache::contains(std::string& url) {
-    lockMutex(&mutex, "cacheMutex", name);
+    lockMutex(&mutex);
     bool contains = urlToCacheNode.find(url) != urlToCacheNode.end();
-    unlockMutex(&mutex, "cacheMutex", name);
+    unlockMutex(&mutex);
 
     return contains;
 }
 
 std::shared_ptr<CacheNode>& Cache::getCacheNode(std::string& url){
-    lockMutex(&mutex, "cacheMutex", name);
+    lockMutex(&mutex);
     auto& nodeRef = urlToCacheNode[url];
-    unlockMutex(&mutex, "cacheMutex", name);
+    unlockMutex(&mutex);
     return nodeRef;
 }
 
 void Cache::addCacheNode(std::string& path){
-    lockMutex(&mutex, "cacheMutex", name);
+    lockMutex(&mutex);
     urlToCacheNode.emplace(path, std::make_shared<CacheNode>());
-    unlockMutex(&mutex,"cacheMutex", name);
+    unlockMutex(&mutex);
 }
 
 Cache::Cache() {
@@ -27,4 +27,10 @@ Cache::Cache() {
 
 Cache::~Cache() {
     destroyMutex(&mutex);
+}
+
+void Cache::removeCacheNode(std::string &path) {
+    lockMutex(&mutex);
+    urlToCacheNode.erase(path);
+    unlockMutex(&mutex);
 }

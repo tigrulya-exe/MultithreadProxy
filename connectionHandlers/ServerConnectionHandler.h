@@ -38,6 +38,8 @@ public:
     static void* startThread(void* );
 
     virtual ~ServerConnectionHandler() override;
+
+    void handleError(const char *what);
 };
 
 #endif

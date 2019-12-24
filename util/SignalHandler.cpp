@@ -8,7 +8,7 @@ SignalHandler::SignalHandler(std::vector<pthread_t> &threadIds, pthread_mutex_t 
                                                 : threadIds(threadIds), mutex(mutex), proxyThreadId(proxyThreadId) {}
 
 void *SignalHandler::startThread(void* signalHandlerPtr) {
-    SignalHandler* signalHandler = (SignalHandler *)signalHandlerPtr;
+    auto* signalHandler = (SignalHandler *)signalHandlerPtr;
     signalHandler->sigWait();
     return nullptr;
 }
@@ -22,30 +22,31 @@ void SignalHandler::sigWait() {
         exit(EXIT_FAILURE);
     }
 
-    int sig;
+    int signal;
 
-    if(sigwait(&sigSet, &sig) < 0){
+    if(sigwait(&sigSet, &signal) < 0){
         perror("Error waiting for signal");
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "SIGNAL RECEIVED" << std::endl;
-
+    std::cout << "SIGNAL RECEIVED: " << signal << std::endl;
 
     lockMutex(&mutex);
     for(auto& threadId : threadIds){
         if(pthread_cancel(threadId) < 0){
-            perror("ERROR CANCELING");
+            perror("Error canceling thread");
         }
-        std::cout << "SIGKILL WAS SENT TO" << threadId << std::endl;
+
+#ifdef DEBUG_CANCEL_THREAD_LIST
+        std::cout << threadId << " : was cancelled" << std::endl;
         fflush(stdout);
+#endif
+
     }
     unlockMutex(&mutex);
 
     pthread_kill(proxyThreadId, SIGUSR1);
 
-
-    std::cout << "SIGNAL END" << std::endl;
+    std::cout << "SIGNAL HANDLER EXIT" << std::endl;
     fflush(stdout);
-
 }
